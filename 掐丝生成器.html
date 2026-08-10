@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>福贵掐丝生成器</title>
+  <title>掐丝生成器</title>
   <style>
     :root {
       --ink: #142224;
@@ -1269,7 +1269,7 @@
     <header class="app-header">
       <div class="header-brand">
         <div>
-          <strong>福贵掐丝生成器</strong>
+          <strong>掐丝生成器</strong>
           <span>将黑线线稿转换为 3D 打印模型</span>
         </div>
       </div>
@@ -3310,7 +3310,371 @@
       renderStlPreviewCanvas();
     }
 
-    function runStlJob(job) {
+    /*
+     * Polygon triangulation: Earcut 3.2.3
+     * ISC License — Copyright (c) 2026, Mapbox
+     *
+     * Permission to use, copy, modify, and/or distribute this software for any
+     * purpose with or without fee is hereby granted, provided that the above
+     * copyright notice and this permission notice appear in all copies.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+     * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+     * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+     * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+     * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+     * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+     * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+     */
+    function createVectorEarcut() {
+      const module = { exports: {} };
+      const exports = module.exports;
+      !function(t,n){"object"==typeof exports&&"undefined"!=typeof module?n(exports):"function"==typeof define&&define.amd?define(["exports"],n):n((t="undefined"!=typeof globalThis?globalThis:t||self).earcut={})}(this,function(t){"use strict";const n=new Set;let e=!1;function r(t,n,e,r,x){let o=null;if(x===G(t,n,e,r)>0)for(let x=n;x<e;x+=r)o=C(x/r|0,t[x],t[x+1],o);else for(let x=e-r;x>=n;x-=r)o=C(x/r|0,t[x],t[x+1],o);return o&&O(o,o.next)&&(D(o),o=o.next),o}function x(t,r=t){const x=r===t;let o,i=t;do{o=!1,i===i.next||0!==n.size&&n.has(i)||!O(i,i.next)&&0!==_(i.prev,i,i.next)?(x||i!==r)&&(i=i.next,o=!x):((x||i===r)&&(r=i.prev),e=!0,D(i),i=i.prev,o=!0)}while(o||i!==r);return r}function o(t,n,r,o,c){c&&function(t,n,e,r){let x=t,o=0;do{x.z=j(x.x,x.y,n,e,r),Z[o++]=x,x=x.next}while(x!==t);!function(t){if(t<=32){for(let n=1;n<t;n++){const t=Z[n],e=t.z;let r=n-1;for(;r>=0&&Z[r].z>e;)Z[r+1]=Z[r],r--;Z[r+1]=t}return}b.length<t&&(b=new Uint32Array(t),z=new Uint32Array(t),A=new Array(t));for(let n=0;n<t;n++)b[n]=Z[n].z;I(t,Z,b,A,z,0),I(t,A,z,Z,b,8),I(t,Z,b,A,z,16),I(t,A,z,Z,b,24)}(o);let i=null;for(let t=0;t<o;t++){const n=Z[t];n.prevZ=i,i&&(i.nextZ=n),i=n}i.nextZ=null}(t,r,o,c);let y=t,s=!1;for(;t.prev!==t.next;){const a=t.prev,h=t.next;if(_(a,t,h)<0&&(c?l(t,r,o,c):i(t)))n.push(a.i,t.i,h.i),D(t),t=h,y=h;else if((t=h)===y){if(e=!1,t=x(t),e){y=t;continue}if(!s){y=t=f(t,n),s=!0;continue}u(t,n,r,o,c);break}}}function i(t){const n=t.prev,e=t,r=t.next,x=n.x,o=e.x,i=r.x,l=n.y,f=e.y,u=r.y,c=Math.min(x,o,i),y=Math.min(l,f,u),s=Math.max(x,o,i),a=Math.max(l,f,u);let h=r.next;for(;h!==n;){if(h.x>=c&&h.x<=s&&h.y>=y&&h.y<=a&&(x!==h.x||l!==h.y)&&F(x,l,o,f,i,u,h.x,h.y)&&_(h.prev,h,h.next)>=0)return!1;h=h.next}return!0}function l(t,n,e,r){const x=t.prev,o=t,i=t.next,l=x.x,f=o.x,u=i.x,c=x.y,y=o.y,s=i.y,a=Math.min(l,f,u),h=Math.min(c,y,s),p=Math.max(l,f,u),v=Math.max(c,y,s),d=j(a,h,n,e,r),M=j(p,v,n,e,r);let w=t.prevZ;for(;w&&w.z>=d;){if(w.x>=a&&w.x<=p&&w.y>=h&&w.y<=v&&w!==i&&(l!==w.x||c!==w.y)&&F(l,c,f,y,u,s,w.x,w.y)&&_(w.prev,w,w.next)>=0)return!1;w=w.prevZ}let g=t.nextZ;for(;g&&g.z<=M;){if(g.x>=a&&g.x<=p&&g.y>=h&&g.y<=v&&g!==i&&(l!==g.x||c!==g.y)&&F(l,c,f,y,u,s,g.x,g.y)&&_(g.prev,g,g.next)>=0)return!1;g=g.nextZ}return!0}function f(t,n){let e=t,r=!1;do{const x=e.prev,o=e.next.next;P(x,e,e.next,o,!1)&&q(x,o)&&q(o,x)&&(n.push(x.i,e.i,o.i),D(e),D(e.next),e=t=o,r=!0),e=e.next}while(e!==t);return r?x(e):e}function u(t,n,e,r,i){let l=t;do{let t=l.next.next;for(;t!==l.prev;){if(l.i!==t.i&&T(l,t)){let f=B(l,t);return l=x(l,l.next),f=x(f,f.next),o(l,n,e,r,i),void o(f,n,e,r,i)}t=t.next}l=l.next}while(l!==t)}let c=!1;function y(t,n){return t.x-n.x||t.y-n.y||(t.next.y-t.y)/(t.next.x-t.x)-(n.next.y-n.y)/(n.next.x-n.x)}function s(t,n){const e=function(t,n){let e=n;const r=t.x,x=t.y;let o,i=-1/0;if(O(t,e))return e;for(let n=0,l=0;n<p;n++,l+=4){if(x<h[l+1]||x>h[l+3]||h[l]>r||h[l+2]<=i)continue;const f=w(n);e=g(n);do{if(e.prev.next===e){if(O(t,e.next))return e.next;if(x<=e.y&&x>=e.next.y&&e.next.y!==e.y){const t=e.x+(x-e.y)*(e.next.x-e.x)/(e.next.y-e.y);if(t<=r&&t>i&&(i=t,o=e.x<e.next.x?e:e.next,t===r))return o}}e=e.next}while(e!==f)}if(!o)return null;const l=o.x,f=o.y,u=Math.min(x,f),c=Math.max(x,f);let y=1/0;for(let n=0,s=0;n<p;n++,s+=4){if(h[s+2]<l||h[s]>r||h[s+3]<u||h[s+1]>c)continue;const a=w(n);e=g(n);do{if(e.prev.next===e&&r>=e.x&&e.x>=l&&r!==e.x&&F(x<f?r:i,x,l,f,x<f?i:r,x,e.x,e.y)){const n=Math.abs(x-e.y)/(r-e.x);(q(e,t)||e.y===x&&e.next.y===x&&e.next.x>r)&&(n<y||n===y&&(e.x>o.x||e.x===o.x&&m(o,e)))&&(o=e,y=n)}e=e.next}while(e!==a)}return o}(t,n);if(!e)return n;const r=B(e,t);return M(e,r.next.next),x(r,r.next),x(e,e.next)}const a=16;let h=new Float64Array(0),p=0;const v=[],d=[];function M(t,n){let e=t;do{const t=p++;v[t]=e;let r=1/0,x=1/0,o=-1/0,i=-1/0,l=0;do{const n=e.next;e.z=t,e.x<r&&(r=e.x),e.x>o&&(o=e.x),e.y<x&&(x=e.y),e.y>i&&(i=e.y),n.x<r&&(r=n.x),n.x>o&&(o=n.x),n.y<x&&(x=n.y),n.y>i&&(i=n.y),e=n}while(++l<a&&e!==n);d[t]=e;const f=4*t;h[f]=r,h[f+1]=x,h[f+2]=o,h[f+3]=i}while(e!==n)}function w(t){let n=d[t];for(;n.prev.next!==n;)n=n.next;return d[t]=n,n}function g(t){let n=v[t];for(;n.prev.next!==n;)n=n.next;return v[t]=n,n}function m(t,n){return _(t.prev,t,n.prev)<0&&_(n.next,t,t.next)<0}const Z=[];let A=[],b=new Uint32Array(0),z=new Uint32Array(0);const U=new Uint32Array(256);function I(t,n,e,r,x,o){U.fill(0);for(let n=0;n<t;n++)U[e[n]>>>o&255]++;let i=0;for(let t=0;t<256;t++){const n=U[t];U[t]=i,i+=n}for(let i=0;i<t;i++){const t=e[i],l=U[t>>>o&255]++;r[l]=n[i],x[l]=t}}function j(t,n,e,r,x){return(t=1431655765&((t=858993459&((t=252645135&((t=16711935&((t=(t-e)*x|0)|t<<8))|t<<4))|t<<2))|t<<1))|(n=1431655765&((n=858993459&((n=252645135&((n=16711935&((n=(n-r)*x|0)|n<<8))|n<<4))|n<<2))|n<<1))<<1}function k(t){let n=t,e=t;do{(n.x<e.x||n.x===e.x&&n.y<e.y)&&(e=n),n=n.next}while(n!==t);return e}function F(t,n,e,r,x,o,i,l){return(x-i)*(n-l)>=(t-i)*(o-l)&&(t-i)*(r-l)>=(e-i)*(n-l)&&(e-i)*(o-l)>=(x-i)*(r-l)}function T(t,n){const e=O(t,n)&&_(t.prev,t,t.next)>0&&_(n.prev,n,n.next)>0;return t.next.i!==n.i&&(e||q(t,n)&&q(n,t)&&(0!==_(t.prev,t,n.prev)||0!==_(t,n.prev,n)))&&!function(t,n){const e=Math.min(t.x,n.x),r=Math.max(t.x,n.x),x=Math.min(t.y,n.y),o=Math.max(t.y,n.y);let i=t;do{const l=i.next;if(i.x>r&&l.x>r||i.x<e&&l.x<e||i.y>o&&l.y>o||i.y<x&&l.y<x)i=l;else{if(i.i!==t.i&&l.i!==t.i&&i.i!==n.i&&l.i!==n.i&&P(i,l,t,n))return!0;i=l}}while(i!==t);return!1}(t,n)&&(e||function(t,n){let e=t,r=!1;const x=(t.x+n.x)/2,o=(t.y+n.y)/2;do{const t=e.next;e.y>o!=t.y>o&&x<(t.x-e.x)*(o-e.y)/(t.y-e.y)+e.x&&(r=!r),e=t}while(e!==t);return r}(t,n))}function _(t,n,e){return(n.y-t.y)*(e.x-n.x)-(n.x-t.x)*(e.y-n.y)}function O(t,n){return t.x===n.x&&t.y===n.y}function P(t,n,e,r,x=!0){const o=_(t,n,e),i=_(t,n,r),l=_(e,r,t),f=_(e,r,n);return(o>0&&i<0||o<0&&i>0)&&(l>0&&f<0||l<0&&f>0)||!!x&&(!(0!==o||!S(t,e,n))||(!(0!==i||!S(t,r,n))||(!(0!==l||!S(e,t,r))||!(0!==f||!S(e,n,r)))))}function S(t,n,e){return n.x<=Math.max(t.x,e.x)&&n.x>=Math.min(t.x,e.x)&&n.y<=Math.max(t.y,e.y)&&n.y>=Math.min(t.y,e.y)}function q(t,n){return _(t.prev,t,t.next)<0?_(t,n,t.next)>=0&&_(t,t.prev,n)>=0:_(t,n,t.prev)<0||_(t,t.next,n)<0}function B(t,n){const e=E(t.i,t.x,t.y),r=E(n.i,n.x,n.y),x=t.next,o=n.prev;return t.next=n,n.prev=t,e.next=x,x.prev=e,r.next=e,e.prev=r,o.next=r,r.prev=o,r}function C(t,n,e,r){const x=E(t,n,e);return r?(x.next=r.next,x.prev=r,r.next.prev=x,r.next=x):(x.prev=x,x.next=x),x}function D(t){t.next.prev=t.prev,t.prev.next=t.next,t.prevZ&&(t.prevZ.nextZ=t.nextZ),t.nextZ&&(t.nextZ.prevZ=t.prevZ),c&&function(t,n){const e=4*t.z;n.x<h[e]&&(h[e]=n.x),n.y<h[e+1]&&(h[e+1]=n.y),n.x>h[e+2]&&(h[e+2]=n.x),n.y>h[e+3]&&(h[e+3]=n.y)}(t.prev,t.next)}function E(t,n,e){return{i:t,x:n,y:e,prev:null,next:null,z:0,prevZ:null,nextZ:null}}function G(t,n,e,r){let x=0;for(let o=n,i=e-r;o<e;o+=r)x+=(t[i]-t[o])*(t[o+1]+t[i+1]),i=o;return x}let H,J,K,L,N,Q=0,R=0;function V(t,n,e,r,x,o){return(e-t)*(o-n)-(r-n)*(x-t)}function W(t,n,e,r,x,o,i,l){const f=t-i,u=n-l,c=e-i,y=r-l,s=x-i,a=o-l,h=f*f+u*u,p=c*c+y*y,v=s*s+a*a,d=h+p+v;return f*(y*v-p*a)-u*(c*v-p*s)+h*(c*a-y*s)<=1e-13*d*d}function X(t){return t-t%3+(t+1)%3}t.default=function(t,e,i=2){const l=e&&e.length,f=l?e[0]*i:t.length;n.size&&n.clear();let u=r(t,0,f,i,!0);const v=[];if(!u||u.next===u.prev)return v;let d=0,w=0,g=0;if(l&&(u=function(t,e,o,i){const l=[];for(let x=0,o=e.length;x<o;x++){const f=r(t,e[x]*i,x<o-1?e[x+1]*i:t.length,i,!1);f===f.next&&n.add(f),l.push(k(f))}l.sort(y),function(t,n){const e=Math.ceil((t+2*n)/a)+n+2;h.length<4*e&&(h=new Float64Array(4*e));p=0}(t.length/i,e.length),M(o,o),c=!0;for(let t=0;t<l.length;t++)o=s(l[t],o);return c=!1,x(o)}(t,e,u,i)),t.length>80*i){d=t[0],w=t[1];let n=d,e=w;for(let r=i;r<f;r+=i){const x=t[r],o=t[r+1];x<d&&(d=x),o<w&&(w=o),x>n&&(n=x),o>e&&(e=o)}g=Math.max(n-d,e-w),g=0!==g?32767/g:0}return o(u,v,d,w,g),v},t.deviation=function(t,n,e,r){const x=n&&n.length,o=x?n[0]*e:t.length;let i=Math.abs(G(t,0,o,e));if(x)for(let r=0,x=n.length;r<x;r++){const o=n[r]*e,l=r<x-1?n[r+1]*e:t.length;i-=Math.abs(G(t,o,l,e))}let l=0;for(let n=0;n<r.length;n+=3){const x=r[n]*e,o=r[n+1]*e,i=r[n+2]*e;l+=Math.abs((t[x]-t[i])*(t[o+1]-t[x+1])-(t[x]-t[o])*(t[i+1]-t[x+1]))}return 0===i&&0===l?0:Math.abs((l-i)/i)},t.flatten=function(t){const n=[],e=[],r=t[0][0].length;let x=0,o=0;for(const i of t){for(const t of i)for(let e=0;e<r;e++)n.push(t[e]);o&&(x+=o,e.push(x)),o=i.length}return{vertices:n,holes:e,dimensions:r}},t.refine=function(t,n,e=2){const r=t,x=r.length;if(x<6)return;!function(t){(!H||H.length<t)&&(H=new Int32Array(t));(!J||J.length<t)&&(J=new Int32Array(t));(!N||N.length<t)&&(N=new Uint8Array(t));let n=1;for(;n<4*t;)n<<=1;(!K||K.length<n)&&(K=new Int32Array(n),L=new Uint32Array(n));Q=n-1}(x),R++,J.fill(-1,0,x);let o=0;for(let t=0;t<x;t++){const n=r[t],e=r[X(t)],x=n<e?n:e,i=n<e?e:n;let l=(Math.imul(x,2654435761)^Math.imul(i,2246822507))&Q;for(;L[l]===R;){const n=K[l];if(-1!==n){const e=r[n],f=r[X(n)];if(e===x&&f===i||e===i&&f===x){J[t]=n,J[n]=t,K[l]=-1,N[n]=1,H[o++]=n;break}}l=l+1&Q}L[l]!==R&&(K[l]=t,L[l]=R)}for(;o>0;){const t=H[--o];N[t]=0;const x=J[t];if(-1===x)continue;const i=t-t%3,l=x-x%3,f=i+(t+2)%3,u=i+(t+1)%3,c=l+(x+2)%3,y=l+(x+1)%3,s=r[f],a=r[t],h=r[u],p=r[c],v=n[s*e],d=n[s*e+1],M=n[a*e],w=n[a*e+1],g=n[h*e],m=n[h*e+1],Z=n[p*e],A=n[p*e+1];if(!W(v,d,M,w,g,m,Z,A)&&V(v,d,M,w,Z,A)>0&&V(v,d,Z,A,g,m)>0){r[t]=p,r[x]=s;const n=J[c],e=J[f];J[t]=n,-1!==n&&(J[n]=t),J[x]=e,-1!==e&&(J[e]=x),J[f]=c,J[c]=f,-1!==n&&0===N[t]&&(N[t]=1,H[o++]=t),-1!==e&&0===N[x]&&(N[x]=1,H[o++]=x),-1!==J[u]&&0===N[u]&&(N[u]=1,H[o++]=u),-1!==J[y]&&0===N[y]&&(N[y]=1,H[o++]=y)}}},Object.defineProperty(t,"__esModule",{value:!0})});
+      return module.exports.default;
+    }
+
+    const vectorEarcut = createVectorEarcut();
+
+    function simplifyVectorRing(points, tolerance) {
+      const cleaned = [];
+      for (const point of points) {
+        if (!Number.isFinite(point[0]) || !Number.isFinite(point[1])) continue;
+        const previous = cleaned[cleaned.length - 1];
+        if (!previous || Math.hypot(point[0] - previous[0], point[1] - previous[1]) > 1e-6) {
+          cleaned.push(point);
+        }
+      }
+      if (cleaned.length > 1) {
+        const first = cleaned[0];
+        const last = cleaned[cleaned.length - 1];
+        if (Math.hypot(first[0] - last[0], first[1] - last[1]) <= 1e-6) cleaned.pop();
+      }
+      if (cleaned.length <= 3) return cleaned;
+      if (tolerance <= 0) return cleaned;
+
+      const toleranceSq = tolerance * tolerance;
+      const distanceToSegmentSq = (point, start, end) => {
+        const dx = end[0] - start[0];
+        const dy = end[1] - start[1];
+        const lengthSq = dx * dx + dy * dy;
+        if (lengthSq <= 1e-12) {
+          const px = point[0] - start[0];
+          const py = point[1] - start[1];
+          return px * px + py * py;
+        }
+        const amount = clamp(((point[0] - start[0]) * dx + (point[1] - start[1]) * dy) / lengthSq, 0, 1);
+        const px = point[0] - (start[0] + amount * dx);
+        const py = point[1] - (start[1] + amount * dy);
+        return px * px + py * py;
+      };
+      const simplifyPath = (path) => {
+        if (path.length <= 2) return path;
+        const keep = new Uint8Array(path.length);
+        keep[0] = 1;
+        keep[path.length - 1] = 1;
+        const stack = [[0, path.length - 1]];
+        while (stack.length) {
+          const [start, end] = stack.pop();
+          let farthest = -1;
+          let maxDistance = toleranceSq;
+          for (let index = start + 1; index < end; index += 1) {
+            const distance = distanceToSegmentSq(path[index], path[start], path[end]);
+            if (distance > maxDistance) {
+              maxDistance = distance;
+              farthest = index;
+            }
+          }
+          if (farthest < 0) continue;
+          keep[farthest] = 1;
+          stack.push([start, farthest], [farthest, end]);
+        }
+        return path.filter((_, index) => keep[index]);
+      };
+
+      let anchor = 0;
+      for (let index = 1; index < cleaned.length; index += 1) {
+        if (cleaned[index][0] < cleaned[anchor][0]
+          || (cleaned[index][0] === cleaned[anchor][0] && cleaned[index][1] < cleaned[anchor][1])) {
+          anchor = index;
+        }
+      }
+      let opposite = anchor;
+      let farthestSq = -1;
+      for (let index = 0; index < cleaned.length; index += 1) {
+        const dx = cleaned[index][0] - cleaned[anchor][0];
+        const dy = cleaned[index][1] - cleaned[anchor][1];
+        const distanceSq = dx * dx + dy * dy;
+        if (distanceSq > farthestSq) {
+          farthestSq = distanceSq;
+          opposite = index;
+        }
+      }
+      const walk = (start, end) => {
+        const path = [cleaned[start]];
+        let index = start;
+        while (index !== end) {
+          index = (index + 1) % cleaned.length;
+          path.push(cleaned[index]);
+        }
+        return path;
+      };
+      const firstHalf = simplifyPath(walk(anchor, opposite));
+      const secondHalf = simplifyPath(walk(opposite, anchor));
+      const simplified = firstHalf.slice(0, -1).concat(secondHalf.slice(0, -1));
+      return simplified.length >= 3 ? simplified : cleaned;
+    }
+
+    function buildVectorMesh(maskSource, width, height, smoothIterations, tolerance) {
+      const mask = maskSource instanceof Uint8Array ? maskSource : new Uint8Array(maskSource);
+      const bounds = maskBounds(mask, width, height);
+      if (!bounds) return null;
+      const paths = chainSvgSegments(buildSvgContourSegments(mask, width, height, bounds, smoothIterations));
+      if (paths.some((path) => !path.closed)) throw new Error("检测到未闭合轮廓，请降低轮廓平滑后重试");
+
+      const signedArea = (points) => {
+        let area = 0;
+        for (let index = 0, previous = points.length - 1; index < points.length; previous = index, index += 1) {
+          area += points[previous][0] * points[index][1] - points[index][0] * points[previous][1];
+        }
+        return area * 0.5;
+      };
+      const ringBounds = (points) => {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const point of points) {
+          minX = Math.min(minX, point[0]);
+          minY = Math.min(minY, point[1]);
+          maxX = Math.max(maxX, point[0]);
+          maxY = Math.max(maxY, point[1]);
+        }
+        return { minX, minY, maxX, maxY };
+      };
+      const containsPoint = (points, point) => {
+        let inside = false;
+        for (let index = 0, previous = points.length - 1; index < points.length; previous = index, index += 1) {
+          const a = points[index];
+          const b = points[previous];
+          if ((a[1] > point[1]) !== (b[1] > point[1])
+            && point[0] < (b[0] - a[0]) * (point[1] - a[1]) / (b[1] - a[1]) + a[0]) {
+            inside = !inside;
+          }
+        }
+        return inside;
+      };
+
+      const rings = paths
+        .map((path) => simplifyVectorRing(path.points, tolerance))
+        .filter((points) => points.length >= 3)
+        .map((points) => ({
+          points,
+          area: signedArea(points),
+          bounds: ringBounds(points),
+          parent: -1,
+          depth: 0
+        }))
+        .filter((ring) => Math.abs(ring.area) > 1e-5);
+      if (!rings.length) return null;
+
+      for (let index = 0; index < rings.length; index += 1) {
+        const ring = rings[index];
+        const probe = ring.points[0];
+        let parentArea = Infinity;
+        for (let candidateIndex = 0; candidateIndex < rings.length; candidateIndex += 1) {
+          if (candidateIndex === index) continue;
+          const candidate = rings[candidateIndex];
+          const candidateArea = Math.abs(candidate.area);
+          if (candidateArea <= Math.abs(ring.area) || candidateArea >= parentArea) continue;
+          const box = candidate.bounds;
+          if (probe[0] < box.minX || probe[0] > box.maxX || probe[1] < box.minY || probe[1] > box.maxY) continue;
+          if (!containsPoint(candidate.points, probe)) continue;
+          ring.parent = candidateIndex;
+          parentArea = candidateArea;
+        }
+      }
+      for (const ring of rings) {
+        let parent = ring.parent;
+        while (parent >= 0) {
+          ring.depth += 1;
+          parent = rings[parent].parent;
+          if (ring.depth > rings.length) throw new Error("轮廓层级异常");
+        }
+        const shouldBeNegative = ring.depth % 2 === 0;
+        if ((ring.area < 0) !== shouldBeNegative) {
+          ring.points.reverse();
+          ring.area = -ring.area;
+        }
+      }
+
+      const groups = [];
+      let surfaceTriangleCount = 0;
+      for (let index = 0; index < rings.length; index += 1) {
+        const outer = rings[index];
+        if (outer.depth % 2 !== 0) continue;
+        const holes = rings.filter((ring) => ring.parent === index && ring.depth === outer.depth + 1);
+        const coordinates = [];
+        const holeIndices = [];
+        const append = (ring, isHole) => {
+          if (isHole) holeIndices.push(coordinates.length / 2);
+          for (const point of ring.points) coordinates.push(point[0], point[1]);
+        };
+        append(outer, false);
+        holes.forEach((hole) => append(hole, true));
+        const triangles = vectorEarcut(coordinates, holeIndices, 2);
+        const polygonArea = Math.abs(outer.area) - holes.reduce((sum, hole) => sum + Math.abs(hole.area), 0);
+        let triangleArea = 0;
+        for (let triangle = 0; triangle < triangles.length; triangle += 3) {
+          const ai = triangles[triangle] * 2;
+          const bi = triangles[triangle + 1] * 2;
+          const ci = triangles[triangle + 2] * 2;
+          triangleArea += Math.abs(
+            (coordinates[bi] - coordinates[ai]) * (coordinates[ci + 1] - coordinates[ai + 1])
+            - (coordinates[bi + 1] - coordinates[ai + 1]) * (coordinates[ci] - coordinates[ai])
+          ) * 0.5;
+        }
+        if (polygonArea > 1e-5 && Math.abs(triangleArea - polygonArea) / polygonArea > 0.01) {
+          throw new Error("矢量轮廓三角化不完整，请降低轮廓平滑后重试");
+        }
+        surfaceTriangleCount += triangles.length / 3;
+        groups.push({ coordinates, triangles });
+      }
+      return {
+        rings,
+        groups,
+        surfaceTriangleCount,
+        wallEdgeCount: rings.reduce((sum, ring) => sum + ring.points.length, 0),
+        pointCount: rings.reduce((sum, ring) => sum + ring.points.length, 0)
+      };
+    }
+
+    function combineVectorMeshes(meshes) {
+      const signedArea = (points) => {
+        let area = 0;
+        for (let index = 0, previous = points.length - 1; index < points.length; previous = index, index += 1) {
+          area += points[previous][0] * points[index][1] - points[index][0] * points[previous][1];
+        }
+        return area * 0.5;
+      };
+      const boundsOf = (points) => {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const point of points) {
+          minX = Math.min(minX, point[0]);
+          minY = Math.min(minY, point[1]);
+          maxX = Math.max(maxX, point[0]);
+          maxY = Math.max(maxY, point[1]);
+        }
+        return { minX, minY, maxX, maxY };
+      };
+      const containsPoint = (points, point) => {
+        let inside = false;
+        for (let index = 0, previous = points.length - 1; index < points.length; previous = index, index += 1) {
+          const a = points[index];
+          const b = points[previous];
+          if ((a[1] > point[1]) !== (b[1] > point[1])
+            && point[0] < (b[0] - a[0]) * (point[1] - a[1]) / (b[1] - a[1]) + a[0]) {
+            inside = !inside;
+          }
+        }
+        return inside;
+      };
+      const rings = meshes
+        .filter(Boolean)
+        .flatMap((mesh) => mesh.rings.map((ring) => ring.points.map((point) => [point[0], point[1]])))
+        .map((points) => ({ points, area: signedArea(points), bounds: boundsOf(points), parent: -1, depth: 0 }));
+      for (let index = 0; index < rings.length; index += 1) {
+        const ring = rings[index];
+        const probe = ring.points[0];
+        let parentArea = Infinity;
+        for (let candidateIndex = 0; candidateIndex < rings.length; candidateIndex += 1) {
+          if (candidateIndex === index) continue;
+          const candidate = rings[candidateIndex];
+          const candidateArea = Math.abs(candidate.area);
+          if (candidateArea <= Math.abs(ring.area) || candidateArea >= parentArea) continue;
+          const box = candidate.bounds;
+          if (probe[0] < box.minX || probe[0] > box.maxX || probe[1] < box.minY || probe[1] > box.maxY) continue;
+          if (!containsPoint(candidate.points, probe)) continue;
+          ring.parent = candidateIndex;
+          parentArea = candidateArea;
+        }
+      }
+      for (const ring of rings) {
+        let parent = ring.parent;
+        while (parent >= 0) {
+          ring.depth += 1;
+          parent = rings[parent].parent;
+          if (ring.depth > rings.length) throw new Error("组合轮廓层级异常");
+        }
+        const shouldBeNegative = ring.depth % 2 === 0;
+        if ((ring.area < 0) !== shouldBeNegative) {
+          ring.points.reverse();
+          ring.area = -ring.area;
+        }
+      }
+      const groups = [];
+      let surfaceTriangleCount = 0;
+      for (let index = 0; index < rings.length; index += 1) {
+        const outer = rings[index];
+        if (outer.depth % 2 !== 0) continue;
+        const holes = rings.filter((ring) => ring.parent === index && ring.depth === outer.depth + 1);
+        const coordinates = [];
+        const holeIndices = [];
+        const append = (ring, isHole) => {
+          if (isHole) holeIndices.push(coordinates.length / 2);
+          for (const point of ring.points) coordinates.push(point[0], point[1]);
+        };
+        append(outer, false);
+        holes.forEach((hole) => append(hole, true));
+        const triangles = vectorEarcut(coordinates, holeIndices, 2);
+        surfaceTriangleCount += triangles.length / 3;
+        groups.push({ coordinates, triangles });
+      }
+      return {
+        rings,
+        groups,
+        surfaceTriangleCount,
+        wallEdgeCount: rings.reduce((sum, ring) => sum + ring.points.length, 0),
+        pointCount: rings.reduce((sum, ring) => sum + ring.points.length, 0)
+      };
+    }
+
+    function buildVectorWatermarkMask(mask, width, height, modelWidth, modelHeight, source) {
+      if (!source?.data) return null;
+      const data = source.data instanceof Uint8Array ? source.data : new Uint8Array(source.data);
+      const output = new Uint8Array(mask.length);
+      let count = 0;
+      for (let y = 0; y < height; y += 1) {
+        const yMm = modelHeight / 2 - (y + 0.5) * modelHeight / height;
+        const v = (yMm - source.y0) / source.heightMm;
+        if (v < 0 || v >= 1) continue;
+        const iy = Math.min(source.rasterHeight - 1, Math.max(0, Math.floor((1 - v) * source.rasterHeight)));
+        for (let x = 0; x < width; x += 1) {
+          const index = y * width + x;
+          if (!mask[index]) continue;
+          const xMm = -modelWidth / 2 + (x + 0.5) * modelWidth / width;
+          const u = (xMm - source.x0) / source.widthMm;
+          if (u < 0 || u >= 1) continue;
+          const sourceU = source.mirrorX ? 1 - u : u;
+          const ix = Math.min(source.rasterWidth - 1, Math.max(0, Math.floor(sourceU * source.rasterWidth)));
+          if (!data[iy * source.rasterWidth + ix]) continue;
+          output[index] = 1;
+          count += 1;
+        }
+      }
+      return count ? output : null;
+    }
+
+    function vectorMaskTouchesBoundary(innerMask, outerMask, width, height) {
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          const index = y * width + x;
+          if (!innerMask[index]) continue;
+          if (x === 0 || y === 0 || x === width - 1 || y === height - 1) return true;
+          if (!outerMask[index - 1] || !outerMask[index + 1]
+            || !outerMask[index - width] || !outerMask[index + width]) return true;
+        }
+      }
+      return false;
+    }
+
+    function runPixelGridStlJobLegacy(job) {
       const width = job.width;
       const height = job.height;
       const modelWidth = job.modelWidth;
@@ -3327,7 +3691,7 @@
       const textOnlyWatermark = normalizeWatermark(job.textOnlyWatermark);
       if (textOnlyWatermark) {
         const rasterSize = textOnlyWatermark.rasterWidth * textOnlyWatermark.rasterHeight;
-        return runStlJob({
+        return runPixelGridStlJobLegacy({
           width: textOnlyWatermark.rasterWidth,
           height: textOnlyWatermark.rasterHeight,
           modelWidth: textOnlyWatermark.widthMm,
@@ -3761,7 +4125,7 @@
       let outputTriangleCount = triangleCount;
       const outputParts = [{ buffer }];
       for (const standaloneWatermark of standaloneWatermarks) {
-        const textResult = runStlJob({
+        const textResult = runPixelGridStlJobLegacy({
           width: standaloneWatermark.rasterWidth,
           height: standaloneWatermark.rasterHeight,
           modelWidth: standaloneWatermark.widthMm,
@@ -3811,6 +4175,284 @@
         byteLength: outputBuffer.byteLength,
         depth: baseHeight + wireHeight
       };
+    }
+
+    function runStlJob(job) {
+      try {
+        const width = job.width;
+        const height = job.height;
+        const modelWidth = job.modelWidth;
+        const modelHeight = job.modelHeight;
+        const baseHeight = job.baseEnabled ? job.baseThickness : 0;
+        const wireHeight = job.wireHeight;
+        const contourSmooth = Math.max(0, Math.round(job.contourSmooth || 0));
+        const normalizeWatermark = (source) => source?.data
+          ? {
+            ...source,
+            data: source.data instanceof Uint8Array ? source.data : new Uint8Array(source.data)
+          }
+          : null;
+        const textOnlyWatermark = normalizeWatermark(job.textOnlyWatermark);
+        if (textOnlyWatermark) {
+          const rasterSize = textOnlyWatermark.rasterWidth * textOnlyWatermark.rasterHeight;
+          return runStlJob({
+            width: textOnlyWatermark.rasterWidth,
+            height: textOnlyWatermark.rasterHeight,
+            modelWidth: textOnlyWatermark.widthMm,
+            modelHeight: textOnlyWatermark.heightMm,
+            baseEnabled: true,
+            baseThickness: textOnlyWatermark.depth || 3,
+            wireHeight: 0,
+            contourSmooth: 1,
+            wireMask: new Uint8Array(rasterSize),
+            baseMask: textOnlyWatermark.data,
+            baseRimMask: new Uint8Array(rasterSize),
+            baseWatermark: null,
+            standaloneWatermarks: null,
+            standaloneWatermark: null,
+            watermark: null,
+            textOnlyWatermark: null,
+            skipStandaloneWatermark: true
+          });
+        }
+
+        const wireMask = job.wireMask instanceof Uint8Array ? job.wireMask : new Uint8Array(job.wireMask);
+        const baseMask = job.baseMask instanceof Uint8Array ? job.baseMask : new Uint8Array(job.baseMask);
+        const baseRimMask = job.baseRimMask
+          ? (job.baseRimMask instanceof Uint8Array ? job.baseRimMask : new Uint8Array(job.baseRimMask))
+          : new Uint8Array(width * height);
+        const legacyWatermark = normalizeWatermark(job.watermark);
+        const baseWatermark = normalizeWatermark(job.baseWatermark)
+          || (legacyWatermark?.kind === "base" ? legacyWatermark : null);
+        const standaloneSources = Array.isArray(job.standaloneWatermarks) && job.standaloneWatermarks.length
+          ? job.standaloneWatermarks
+          : job.standaloneWatermark
+            ? [job.standaloneWatermark]
+            : legacyWatermark?.kind === "standalone"
+              ? [legacyWatermark]
+              : [];
+        const standaloneWatermarks = job.skipStandaloneWatermark
+          ? []
+          : standaloneSources.map(normalizeWatermark).filter(Boolean);
+        const watermarkActive = Boolean(baseWatermark || standaloneWatermarks.length);
+        const solids = [];
+        if (job.baseEnabled && baseHeight > 0) {
+          solids.push({ mask: baseMask, z0: 0, z1: baseHeight, watermark: baseWatermark });
+        }
+        if (wireHeight > 0) {
+          solids.push({ mask: baseRimMask, z0: baseHeight, z1: baseHeight + wireHeight, watermark: null });
+          solids.push({ mask: wireMask, z0: baseHeight, z1: baseHeight + wireHeight, watermark: null });
+        }
+
+        const pixelsPerMm = Math.max(width / modelWidth, height / modelHeight);
+        const simplifyTolerance = clamp(pixelsPerMm * 0.02, 0.08, 0.28);
+        const plans = [];
+        for (const solid of solids) {
+          const fullMesh = buildVectorMesh(solid.mask, width, height, contourSmooth, simplifyTolerance);
+          if (!fullMesh) continue;
+          const maxCarveDepth = Math.max(0, solid.z1 - solid.z0 - 1e-4);
+          const carveDepth = solid.watermark?.surface === "bottom"
+            ? clamp(Number(solid.watermark.depth) || 0, 0, maxCarveDepth)
+            : 0;
+          if (carveDepth > 0) {
+            const carveMask = buildVectorWatermarkMask(
+              solid.mask,
+              width,
+              height,
+              modelWidth,
+              modelHeight,
+              solid.watermark
+            );
+            if (carveMask) {
+              if (vectorMaskTouchesBoundary(carveMask, solid.mask, width, height)) {
+                throw new Error("凹刻水印接触底板边界");
+              }
+              const carveMesh = buildVectorMesh(carveMask, width, height, contourSmooth, simplifyTolerance);
+              if (carveMesh) {
+                const lowerMesh = combineVectorMeshes([fullMesh, carveMesh]);
+                plans.push({ kind: "bottomCarve", ...solid, fullMesh, lowerMesh, carveMesh, carveDepth });
+                continue;
+              }
+            }
+          }
+          plans.push({ kind: "solid", ...solid, fullMesh });
+        }
+
+        const meshPointCount = (mesh) => mesh?.pointCount || 0;
+        const meshRingCount = (mesh) => mesh?.rings.length || 0;
+        let triangleCount = 0;
+        let vectorPointCount = 0;
+        let vectorRingCount = 0;
+        for (const plan of plans) {
+          if (plan.kind === "solid") {
+            triangleCount += plan.fullMesh.surfaceTriangleCount * 2 + plan.fullMesh.wallEdgeCount * 2;
+            vectorPointCount += meshPointCount(plan.fullMesh);
+            vectorRingCount += meshRingCount(plan.fullMesh);
+          } else {
+            triangleCount += plan.fullMesh.surfaceTriangleCount
+              + (plan.lowerMesh?.surfaceTriangleCount || 0)
+              + plan.carveMesh.surfaceTriangleCount
+              + plan.fullMesh.wallEdgeCount * 2
+              + plan.carveMesh.wallEdgeCount * 2;
+            vectorPointCount += meshPointCount(plan.fullMesh) + meshPointCount(plan.lowerMesh) + meshPointCount(plan.carveMesh);
+            vectorRingCount += meshRingCount(plan.fullMesh) + meshRingCount(plan.lowerMesh) + meshRingCount(plan.carveMesh);
+          }
+        }
+        if (!triangleCount) return { ok: false, error: "没有检测到可生成的笔画" };
+
+        const buffer = new ArrayBuffer(84 + triangleCount * 50);
+        const view = new DataView(buffer);
+        const title = watermarkActive
+          ? "FUGUI maker | Zhong Fugui | douyin ad201655"
+          : "cloisonne vector STL model";
+        for (let index = 0; index < title.length && index < 80; index += 1) view.setUint8(index, title.charCodeAt(index));
+        view.setUint32(80, triangleCount, true);
+        let offset = 84;
+
+        const point = (source, z) => [
+          -modelWidth / 2 + source[0] * modelWidth / width,
+          modelHeight / 2 - source[1] * modelHeight / height,
+          z
+        ];
+        const writeTriangle = (a, b, c) => {
+          const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
+          const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+          let nx = uy * vz - uz * vy;
+          let ny = uz * vx - ux * vz;
+          let nz = ux * vy - uy * vx;
+          const length = Math.hypot(nx, ny, nz) || 1;
+          nx /= length;
+          ny /= length;
+          nz /= length;
+          const values = [nx, ny, nz, a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]];
+          for (const value of values) {
+            view.setFloat32(offset, Number.isFinite(value) ? value : 0, true);
+            offset += 4;
+          }
+          view.setUint16(offset, 0, true);
+          offset += 2;
+        };
+        const emitSurface = (mesh, z, top) => {
+          if (!mesh) return;
+          for (const group of mesh.groups) {
+            const coordinates = group.coordinates;
+            const triangles = group.triangles;
+            for (let index = 0; index < triangles.length; index += 3) {
+              const ai = triangles[index] * 2;
+              const bi = triangles[index + 1] * 2;
+              const ci = triangles[index + 2] * 2;
+              const a = point([coordinates[ai], coordinates[ai + 1]], z);
+              const b = point([coordinates[bi], coordinates[bi + 1]], z);
+              const c = point([coordinates[ci], coordinates[ci + 1]], z);
+              const crossZ = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+              if ((crossZ > 0) === top) writeTriangle(a, b, c);
+              else writeTriangle(a, c, b);
+            }
+          }
+        };
+        const emitWalls = (mesh, z0, z1, reverse = false) => {
+          if (!mesh || z1 <= z0) return;
+          for (const ring of mesh.rings) {
+            for (let index = 0; index < ring.points.length; index += 1) {
+              const next = (index + 1) % ring.points.length;
+              const a = point(ring.points[index], z0);
+              const b = point(ring.points[next], z0);
+              const c = point(ring.points[next], z1);
+              const d = point(ring.points[index], z1);
+              if (reverse) {
+                writeTriangle(a, c, b);
+                writeTriangle(a, d, c);
+              } else {
+                writeTriangle(a, b, c);
+                writeTriangle(a, c, d);
+              }
+            }
+          }
+        };
+
+        for (const plan of plans) {
+          if (plan.kind === "solid") {
+            emitSurface(plan.fullMesh, plan.z1, true);
+            emitSurface(plan.fullMesh, plan.z0, false);
+            emitWalls(plan.fullMesh, plan.z0, plan.z1);
+          } else {
+            const recessZ = plan.z0 + plan.carveDepth;
+            emitSurface(plan.fullMesh, plan.z1, true);
+            emitSurface(plan.lowerMesh, plan.z0, false);
+            emitSurface(plan.carveMesh, recessZ, false);
+            emitWalls(plan.fullMesh, plan.z0, plan.z1);
+            emitWalls(plan.carveMesh, plan.z0, recessZ, true);
+          }
+        }
+        if (offset !== buffer.byteLength) throw new Error("矢量模型三角面计数不一致");
+
+        let outputBuffer = buffer;
+        let outputTriangleCount = triangleCount;
+        const outputParts = [{ buffer }];
+        for (const standaloneWatermark of standaloneWatermarks) {
+          const textResult = runStlJob({
+            width: standaloneWatermark.rasterWidth,
+            height: standaloneWatermark.rasterHeight,
+            modelWidth: standaloneWatermark.widthMm,
+            modelHeight: standaloneWatermark.heightMm,
+            baseEnabled: true,
+            baseThickness: standaloneWatermark.depth,
+            wireHeight: 0,
+            contourSmooth: 0,
+            wireMask: new Uint8Array(standaloneWatermark.rasterWidth * standaloneWatermark.rasterHeight),
+            baseMask: standaloneWatermark.data,
+            baseWatermark: null,
+            standaloneWatermark: null,
+            watermark: null,
+            skipStandaloneWatermark: true
+          });
+          if (!textResult.ok) continue;
+          const translated = textResult.buffer.slice(0);
+          const translatedView = new DataView(translated);
+          const offsetX = standaloneWatermark.x0 + standaloneWatermark.widthMm / 2;
+          const offsetY = standaloneWatermark.y0 + standaloneWatermark.heightMm / 2;
+          const radians = Number(standaloneWatermark.rotation || 0) * Math.PI / 180;
+          const cos = Math.cos(radians);
+          const sin = Math.sin(radians);
+          const textTriangleCount = translatedView.getUint32(80, true);
+          for (let triangle = 0; triangle < textTriangleCount; triangle += 1) {
+            const triangleOffset = 84 + triangle * 50 + 12;
+            for (let vertex = 0; vertex < 3; vertex += 1) {
+              const vertexOffset = triangleOffset + vertex * 12;
+              const localX = translatedView.getFloat32(vertexOffset, true);
+              const localY = translatedView.getFloat32(vertexOffset + 4, true);
+              translatedView.setFloat32(vertexOffset, localX * cos - localY * sin + offsetX, true);
+              translatedView.setFloat32(vertexOffset + 4, localX * sin + localY * cos + offsetY, true);
+              translatedView.setFloat32(vertexOffset + 8, translatedView.getFloat32(vertexOffset + 8, true) + baseHeight, true);
+            }
+          }
+          vectorPointCount += textResult.vectorPointCount || 0;
+          vectorRingCount += textResult.vectorRingCount || 0;
+          outputParts.push({ buffer: translated });
+        }
+        if (outputParts.length > 1) {
+          outputBuffer = mergeBinaryStlParts(outputParts);
+          outputTriangleCount = new DataView(outputBuffer).getUint32(80, true);
+        }
+        return {
+          ok: true,
+          buffer: outputBuffer,
+          triangleCount: outputTriangleCount,
+          byteLength: outputBuffer.byteLength,
+          depth: baseHeight + wireHeight,
+          modelingMode: "vector",
+          vectorPointCount,
+          vectorRingCount
+        };
+      } catch (error) {
+        const fallback = runPixelGridStlJobLegacy(job);
+        if (!fallback.ok) return fallback;
+        return {
+          ...fallback,
+          modelingMode: "pixel-fallback",
+          vectorError: error?.message || String(error)
+        };
+      }
     }
 
     const MODEL_WATERMARK_LINES = [
@@ -4337,6 +4979,8 @@
         ...(baseResult ? [{ buffer: baseResult.buffer, zOffset: 0 }] : []),
         { buffer: wireResult.buffer, zOffset: baseResult ? job.baseThickness : 0 }
       ]);
+      const modelingResults = [baseResult, wireResult].filter(Boolean);
+      const vectorFallback = modelingResults.find((result) => result.modelingMode === "pixel-fallback");
       return {
         ok: true,
         buffer,
@@ -4344,7 +4988,11 @@
         byteLength: buffer.byteLength,
         objectCount: buildItems.length,
         materialCount: 2,
-        previewTriangleCount: new DataView(previewBuffer).getUint32(80, true)
+        previewTriangleCount: new DataView(previewBuffer).getUint32(80, true),
+        modelingMode: vectorFallback ? "pixel-fallback" : "vector",
+        vectorPointCount: modelingResults.reduce((sum, result) => sum + (result.vectorPointCount || 0), 0),
+        vectorRingCount: modelingResults.reduce((sum, result) => sum + (result.vectorRingCount || 0), 0),
+        vectorError: vectorFallback?.vectorError
       };
     }
 
@@ -4376,6 +5024,16 @@
         ${runProcessJob.toString()}
         ${resampleMaskForMesh.toString()}
         ${prepareMeshJob.toString()}
+        const vectorEarcut = (${createVectorEarcut.toString()})();
+        ${buildSvgScalarGrid.toString()}
+        ${buildSvgContourSegments.toString()}
+        ${chainSvgSegments.toString()}
+        ${simplifyVectorRing.toString()}
+        ${buildVectorMesh.toString()}
+        ${combineVectorMeshes.toString()}
+        ${buildVectorWatermarkMask.toString()}
+        ${vectorMaskTouchesBoundary.toString()}
+        ${runPixelGridStlJobLegacy.toString()}
         ${runStlJob.toString()}
         ${binaryStlTo3mfMesh.toString()}
         ${mergeBinaryStlParts.toString()}
@@ -4576,7 +5234,10 @@
         controls.downloadStlButton.disabled = false;
         const gridText = result.meshLimited ? `，网格已限流为 ${result.meshWidth} × ${result.meshHeight}` : "";
         const previewText = previewSkipped ? "，三角面过多已跳过 3D 预览" : "";
-        controls.statsText.innerHTML = `<strong>${result.triangleCount.toLocaleString()}</strong> 三角面，STL ${(result.byteLength / 1024 / 1024).toFixed(2)} MB，厚度 ${result.depth.toFixed(1)} mm${gridText}${previewText}`;
+        const modelingText = result.modelingMode === "pixel-fallback"
+          ? "，轮廓异常已回退像素网格"
+          : `，矢量轮廓 ${(result.vectorRingCount || 0).toLocaleString()} 条`;
+        controls.statsText.innerHTML = `<strong>${result.triangleCount.toLocaleString()}</strong> 三角面，STL ${(result.byteLength / 1024 / 1024).toFixed(2)} MB，厚度 ${result.depth.toFixed(1)} mm${gridText}${modelingText}${previewText}`;
         controls.summaryFaces.textContent = result.triangleCount.toLocaleString();
         showToast(previewSkipped ? "STL 已生成，已跳过大型预览" : "STL 已生成");
       };
@@ -4886,7 +5547,10 @@
         controls.download3mfButton.disabled = false;
         const gridText = result.meshLimited ? `，网格已限流为 ${result.meshWidth} × ${result.meshHeight}` : "";
         const previewText = previewSkipped ? "，三角面过多已跳过 3D 预览" : "";
-        controls.statsText.innerHTML = `<strong>${result.objectCount}</strong> 个对象，<strong>${result.materialCount}</strong> 种耗材，3MF ${(result.byteLength / 1024 / 1024).toFixed(2)} MB${gridText}${previewText}`;
+        const modelingText = result.modelingMode === "pixel-fallback"
+          ? "，轮廓异常已回退像素网格"
+          : `，矢量轮廓 ${(result.vectorRingCount || 0).toLocaleString()} 条`;
+        controls.statsText.innerHTML = `<strong>${result.objectCount}</strong> 个对象，<strong>${result.materialCount}</strong> 种耗材，3MF ${(result.byteLength / 1024 / 1024).toFixed(2)} MB${gridText}${modelingText}${previewText}`;
         controls.summaryFaces.textContent = result.previewTriangleCount.toLocaleString();
         showToast(previewSkipped ? "3MF 已生成，已跳过大型预览" : "双色 3MF 已生成");
       };
