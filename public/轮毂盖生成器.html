@@ -1,0 +1,1045 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f2eee4">
+  <title>婴儿车轮毂盖生成器</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23ec6a3a'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%23fff8eb' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23fff8eb'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      --paper: #f2eee4;
+      --paper-deep: #e7e0d2;
+      --panel: #fffaf0;
+      --ink: #222522;
+      --ink-soft: #66685f;
+      --line: #cfc7b8;
+      --orange: #ec6a3a;
+      --orange-soft: #f7c3a8;
+      --teal: #2e7771;
+      --danger: #b84434;
+      --ok: #347363;
+      --shadow: 0 24px 64px rgba(48, 43, 34, 0.12);
+      --display: "Iowan Old Style", "Songti SC", "STSong", serif;
+      --body: "Avenir Next", "PingFang SC", "Microsoft YaHei", sans-serif;
+      --mono: "SFMono-Regular", Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(rgba(34, 37, 34, 0.032) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34, 37, 34, 0.032) 1px, transparent 1px),
+        var(--paper);
+      background-size: 24px 24px;
+      font-family: var(--body);
+    }
+    button, input, select { font: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+
+    .app-header {
+      position: sticky;
+      z-index: 30;
+      top: 0;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      min-height: 66px;
+      align-items: center;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(242, 238, 228, 0.9);
+      backdrop-filter: blur(16px);
+    }
+    .brand { display: flex; gap: 12px; align-items: baseline; }
+    .brand strong { font-family: var(--display); font-size: 21px; }
+    .brand span, .header-center, .header-chip {
+      color: var(--ink-soft);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .header-center { color: var(--orange); }
+    .header-actions { display: flex; justify-content: flex-end; gap: 10px; align-items: center; }
+    .home-link, .header-chip {
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      color: var(--ink);
+      text-decoration: none;
+      background: rgba(255, 250, 240, 0.58);
+    }
+    .header-chip { color: var(--orange); border-color: var(--orange-soft); }
+
+    .app-main {
+      display: grid;
+      grid-template-columns: minmax(330px, 390px) minmax(0, 1fr);
+      min-height: calc(100vh - 66px);
+    }
+    .sidebar {
+      position: relative;
+      z-index: 4;
+      padding: 20px;
+      border-right: 1px solid var(--line);
+      background: rgba(242, 238, 228, 0.94);
+    }
+    .notice {
+      margin-bottom: 14px;
+      padding: 13px 14px;
+      border-left: 3px solid var(--orange);
+      color: #6f3929;
+      background: #fff1e7;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .section {
+      margin-bottom: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255, 250, 240, 0.84);
+    }
+    .section-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .section-heading strong { font-family: var(--display); font-size: 17px; }
+    .section-heading span { color: var(--orange); font: 9px var(--mono); letter-spacing: 0.12em; }
+    .section-body { display: grid; gap: 13px; padding: 14px; }
+    .control { display: grid; grid-template-columns: 1fr 78px; gap: 7px 10px; align-items: center; }
+    .control label { font-size: 12px; font-weight: 650; }
+    .control output { color: var(--orange); font: 10px var(--mono); text-align: right; }
+    .control input[type="number"] {
+      width: 100%;
+      padding: 7px 8px;
+      border: 1px solid var(--line);
+      border-radius: 0;
+      color: var(--ink);
+      background: #fffdf8;
+      text-align: right;
+    }
+    .control input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--orange); }
+    .control-note { grid-column: 1 / -1; margin: -2px 0 0; color: var(--ink-soft); font-size: 10px; line-height: 1.55; }
+    .position-readout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      border: 1px solid var(--line);
+      background: var(--line);
+    }
+    .position-readout div { padding: 10px; background: #fffdf8; }
+    .position-readout .wide { grid-column: 1 / -1; }
+    .position-readout span { display: block; margin-bottom: 4px; color: var(--ink-soft); font-size: 9px; }
+    .position-readout strong { color: var(--teal); font: 600 13px var(--mono); }
+    .diagram {
+      position: relative;
+      height: 112px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: #e9e5da;
+    }
+    .diagram svg { width: 100%; height: 100%; }
+    .diagram text { fill: var(--ink-soft); font: 8px var(--mono); }
+    .diagram .measure { stroke: var(--orange); stroke-width: 1.3; }
+    .diagram .part { fill: #fff8eb; stroke: var(--ink); stroke-width: 1.2; }
+    .diagram .spoke { fill: rgba(46,119,113,.18); stroke: var(--teal); stroke-width: 1.2; }
+    .diagram .hook { fill: var(--orange-soft); stroke: var(--orange); stroke-width: 1.2; }
+    .clip-group-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+    .clip-group-button {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      color: var(--ink-soft);
+      background: #fffdf8;
+      cursor: pointer;
+      font: 600 10px var(--mono);
+    }
+    .clip-group-button[aria-pressed="true"] { border-color: var(--teal); color: white; background: var(--teal); }
+    .clip-group-note { margin: 0; color: var(--ink-soft); font-size: 10px; line-height: 1.55; }
+
+    .upload-zone {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 12px;
+      align-items: center;
+      min-height: 70px;
+      padding: 12px;
+      border: 1px dashed #aa9e8b;
+      cursor: pointer;
+      background: #fffdf8;
+      transition: border-color .2s, background .2s;
+    }
+    .upload-zone:hover, .upload-zone.dragging { border-color: var(--orange); background: #fff4e9; }
+    .upload-zone input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    .upload-icon { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 50%; color: white; background: var(--orange); font-size: 22px; }
+    .upload-zone strong, .upload-zone small { display: block; }
+    .upload-zone strong { margin-bottom: 3px; font-size: 12px; }
+    .upload-zone small { color: var(--ink-soft); font-size: 10px; }
+    .pattern-row { display: grid; grid-template-columns: 96px 1fr; gap: 12px; }
+    #patternCanvas { width: 96px; height: 96px; border: 1px solid var(--line); background: white; image-rendering: pixelated; }
+    .mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; border: 1px solid var(--line); background: var(--line); }
+    .mode-switch label { position: relative; cursor: pointer; }
+    .mode-switch input { position: absolute; opacity: 0; }
+    .mode-switch span { display: block; padding: 9px 6px; text-align: center; background: #fffdf8; font-size: 11px; }
+    .mode-switch input:checked + span { color: white; background: var(--ink); }
+    .preset-switch { grid-template-columns: repeat(3, 1fr); }
+    .preset-switch span { display: grid; min-height: 48px; place-items: center; line-height: 1.35; }
+    .inline-check { display: flex; justify-content: space-between; gap: 12px; align-items: center; font-size: 11px; }
+    .inline-check input { accent-color: var(--orange); }
+
+    details.section > summary {
+      padding: 13px 14px;
+      cursor: pointer;
+      font-family: var(--display);
+      font-weight: 700;
+      list-style: none;
+    }
+    details.section > summary::after { float: right; color: var(--orange); content: "+"; }
+    details.section[open] > summary::after { content: "−"; }
+    details.section[open] > summary { border-bottom: 1px solid var(--line); }
+
+    .export-dock {
+      position: sticky;
+      z-index: 10;
+      bottom: 12px;
+      padding: 13px;
+      border: 1px solid var(--ink);
+      background: rgba(255, 250, 240, 0.96);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+    .export-status { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 10px; font-size: 10px; }
+    .export-status strong { color: var(--ok); }
+    .export-status strong.error { color: var(--danger); }
+    .export-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .export-button {
+      min-height: 42px;
+      border: 1px solid var(--ink);
+      color: white;
+      background: var(--ink);
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .export-button.secondary { color: var(--ink); background: transparent; }
+    .export-button.trial { grid-column: 1 / -1; border-color: var(--orange); color: #6f3929; background: #fff1e7; }
+    .export-button:disabled { cursor: not-allowed; opacity: .38; }
+    .export-note { margin: 9px 0 0; color: var(--ink-soft); font-size: 9px; line-height: 1.5; }
+
+    .workspace {
+      position: sticky;
+      top: 66px;
+      display: grid;
+      grid-template-rows: auto minmax(480px, 1fr) auto;
+      height: calc(100vh - 66px);
+      min-width: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 68% 25%, rgba(236, 106, 58, .14), transparent 28%),
+        linear-gradient(145deg, #ddd8cd, #f7f3e9 58%, #d8d4c9);
+    }
+    .workspace-toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(34, 37, 34, .18);
+      background: rgba(255,255,255,.26);
+    }
+    .view-buttons { display: flex; gap: 6px; }
+    .view-button, .reset-button {
+      padding: 7px 10px;
+      border: 1px solid rgba(34,37,34,.25);
+      color: var(--ink);
+      background: rgba(255,255,255,.48);
+      cursor: pointer;
+      font-size: 10px;
+    }
+    .view-button.active { color: white; background: var(--ink); }
+    .toolbar-meta { display: flex; gap: 14px; color: var(--ink-soft); font: 10px var(--mono); }
+    .canvas-wrap { position: relative; min-height: 0; }
+    #previewCanvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+    #previewCanvas:active { cursor: grabbing; }
+    .canvas-title, .canvas-hint {
+      position: absolute;
+      pointer-events: none;
+      font-family: var(--mono);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .canvas-title { top: 20px; left: 22px; color: var(--ink); font-size: 10px; }
+    .canvas-title::before { display: inline-block; width: 24px; height: 2px; margin-right: 9px; vertical-align: middle; background: var(--orange); content: ""; }
+    .canvas-hint { right: 22px; bottom: 20px; color: rgba(34,37,34,.55); font-size: 8px; }
+    .edge-measure {
+      position: absolute;
+      top: 44px;
+      left: 22px;
+      padding-left: 34px;
+      color: var(--teal);
+      font: 9px var(--mono);
+      pointer-events: none;
+    }
+    .edge-measure::before { position: absolute; top: 50%; left: 0; width: 26px; border-top: 1px solid var(--teal); content: ""; }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-top: 1px solid rgba(34, 37, 34, .18);
+      background: rgba(255, 250, 240, .76);
+      backdrop-filter: blur(12px);
+    }
+    .metric { min-height: 72px; padding: 14px 16px; }
+    .metric + .metric { border-left: 1px solid var(--line); }
+    .metric span { display: block; margin-bottom: 6px; color: var(--ink-soft); font-size: 9px; }
+    .metric strong { font: 600 13px var(--mono); }
+    .toast {
+      position: fixed;
+      z-index: 100;
+      right: 22px;
+      bottom: 22px;
+      max-width: 360px;
+      padding: 12px 16px;
+      color: white;
+      background: var(--ink);
+      box-shadow: var(--shadow);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(12px);
+      transition: opacity .2s, transform .2s;
+      font-size: 12px;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 900px) {
+      .app-header { grid-template-columns: 1fr auto; padding: 0 14px; }
+      .header-center, .header-chip { display: none; }
+      .app-main { display: flex; flex-direction: column; }
+      .workspace { position: relative; top: 0; order: -1; height: 58vh; min-height: 480px; }
+      .sidebar { border-top: 1px solid var(--line); border-right: 0; }
+      .metrics { grid-template-columns: 1fr 1fr; }
+      .metric:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
+      .metric:nth-child(4) { border-top: 1px solid var(--line); }
+    }
+    @media (max-width: 520px) {
+      .brand span, .toolbar-meta span:first-child { display: none; }
+      .workspace { height: 500px; min-height: 500px; }
+      .workspace-toolbar { align-items: flex-start; flex-direction: column; }
+      .view-buttons { width: 100%; }
+      .view-button { flex: 1; }
+      .sidebar { padding: 12px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand"><strong>婴儿车轮毂盖生成器</strong><span>Hubcap atelier</span></div>
+    <div class="header-center">Measure · Fit · Print</div>
+    <div class="header-actions"><a class="home-link" href="./index.html">工具首页</a><span class="header-chip">STL / 3MF</span></div>
+  </header>
+
+  <main class="app-main">
+    <aside class="sidebar" aria-label="轮毂盖参数">
+      <div class="notice"><strong>非承力装饰件</strong><br>不得替代原厂轮毂、轴承、制动或锁止结构。打印后必须完成拉脱、振动与车轮干涉检查。</div>
+
+      <section class="section">
+        <div class="section-heading"><strong>盖板尺寸</strong><span>01 / BODY</span></div>
+        <div class="section-body">
+          <div class="control"><label for="coverDiameter">轮毂盖外径</label><input id="coverDiameter" type="number" min="80" max="320" step="1" value="200"><input data-pair="coverDiameter" type="range" min="80" max="320" step="1" value="200"></div>
+          <p class="control-note">盖板厚度和外圈保留宽度会根据外径自动计算；图案不会切入外圈，也不会切断卡爪根座到外圈的实体桥。</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-heading"><strong>轮辐与双爪</strong><span>02 / FIT</span></div>
+        <div class="section-body">
+          <div class="diagram" aria-label="轮辐深度与双爪测量示意">
+            <svg viewBox="0 0 320 112" role="img">
+              <path class="part" d="M34 14h252v13H34z"/>
+              <path class="spoke" d="M122 49h116v30H122z"/>
+              <path class="part" d="M103 27h13v59h-13z"/>
+              <path class="hook" d="M103 79h31v8h-31z"/>
+              <path class="measure" d="M78 27v60m-5-60h10m-10 60h10"/>
+              <path class="measure" d="M250 49v30m-5-30h10m-10 30h10"/>
+              <text x="12" y="58">总深度</text>
+              <text x="257" y="67">轮辐</text>
+              <text x="126" y="101">末端从背面回勾</text>
+              <text x="151" y="44">盖板背面</text>
+            </svg>
+          </div>
+          <div class="control"><label for="clipRadius">中心到卡扣距离</label><input id="clipRadius" type="number" min="20" max="150" step="0.5" value="70"><input data-pair="clipRadius" type="range" min="20" max="150" step="0.5" value="70"></div>
+          <div class="control"><label for="clipCount">候选卡扣组数</label><input id="clipCount" type="number" min="3" max="12" step="1" value="5"><input data-pair="clipCount" type="range" min="3" max="12" step="1" value="5"></div>
+          <div class="control"><label for="startAngle">卡扣起始角度</label><input id="startAngle" type="number" min="-180" max="180" step="1" value="0"><input data-pair="startAngle" type="range" min="-180" max="180" step="1" value="0"></div>
+          <div class="control"><label for="spokeWidth">轮辐宽度</label><input id="spokeWidth" type="number" min="4" max="36" step="0.5" value="12"><input data-pair="spokeWidth" type="range" min="4" max="36" step="0.5" value="12"><p class="control-note">在卡扣安装半径处，沿圆周方向测量单根轮辐宽度。</p></div>
+          <div class="control"><label for="spokeBackDepth">卡扣总深度</label><input id="spokeBackDepth" type="number" min="8" max="50" step="0.5" value="20"><input data-pair="spokeBackDepth" type="range" min="8" max="50" step="0.5" value="20"><p class="control-note">从轮毂盖背面量到轮辐最背面；已包含中心轴帽高差和轮辐前部的全部空隙。</p></div>
+          <div>
+            <p class="clip-group-note" style="margin-bottom:7px">结构强度</p>
+            <div class="mode-switch preset-switch" role="radiogroup" aria-label="结构强度预设">
+              <label><input type="radio" name="strengthPreset" value="easy"><span>容易<br>拆装</span></label>
+              <label><input type="radio" name="strengthPreset" value="balanced"><span>均衡</span></label>
+              <label><input type="radio" name="strengthPreset" value="reinforced" checked><span>加强且<br>可拆</span></label>
+            </div>
+          </div>
+          <div>
+            <p class="clip-group-note" style="margin-bottom:7px">装配松紧</p>
+            <div class="mode-switch preset-switch" role="radiogroup" aria-label="装配松紧预设">
+              <label><input type="radio" name="fitPreset" value="tight"><span>偏紧</span></label>
+              <label><input type="radio" name="fitPreset" value="standard" checked><span>标准</span></label>
+              <label><input type="radio" name="fitPreset" value="loose"><span>偏松</span></label>
+            </div>
+          </div>
+          <div class="position-readout">
+            <div><span>启用卡扣组</span><strong id="activeClipCount">—</strong></div>
+            <div><span>双爪内部间距</span><strong id="jawOpening">—</strong></div>
+            <div><span>预计卡爪应变</span><strong id="clipStrain">—</strong></div>
+            <div class="wide"><span>当前结构尺寸</span><strong id="autoDimensions">—</strong></div>
+          </div>
+          <div class="clip-group-picker" id="clipGroupPicker" aria-label="逐组启用或删除卡扣"></div>
+          <p class="clip-group-note">点击编号可删除或恢复该组双爪；为避免脱落，至少保留 3 组。</p>
+        </div>
+      </section>
+
+      <details class="section">
+        <summary>卡爪微调 <span id="clipDetailStatus" style="float:none;margin-left:8px;color:var(--teal);font:9px var(--mono)">跟随预设</span></summary>
+        <div class="section-body">
+          <p class="control-note">预设会自动填入安全起点。修改任一尺寸后进入自定义状态；切换预设可重新载入推荐值。倒钩的径向宽度与爪片径向宽度相同。</p>
+          <div class="control"><label for="contactLength">爪片径向宽度</label><input id="contactLength" data-clip-custom type="number" min="8" max="30" step="0.5" value="14"></div>
+          <div class="control"><label for="legThickness">爪片厚度</label><input id="legThickness" data-clip-custom type="number" min="1.2" max="3.5" step="0.1" value="2"></div>
+          <div class="control"><label for="sideClearance">单侧装配间隙</label><input id="sideClearance" data-clip-custom type="number" min="0.1" max="1" step="0.05" value="0.35"></div>
+          <div class="control"><label for="engagement">倒钩深度</label><input id="engagement" data-clip-custom type="number" min="0.3" max="2" step="0.05" value="0.8"><p class="control-note">倒钩向轮辐内侧伸出的距离，直接影响拉脱力和拆卸难度。</p></div>
+          <div class="control"><label for="hookHeight">倒钩高度</label><input id="hookHeight" data-clip-custom type="number" min="0.8" max="4" step="0.1" value="1.4"></div>
+          <div class="control"><label for="chamfer">导入斜面高度</label><input id="chamfer" data-clip-custom type="number" min="0.3" max="4" step="0.1" value="0.8"></div>
+          <div class="control"><label for="rootHeight">根部加强高度</label><input id="rootHeight" data-clip-custom type="number" min="2" max="10" step="0.5" value="5"></div>
+          <label class="inline-check"><span>圆钝防脱棱</span><input id="ridgeEnabled" type="checkbox" checked></label>
+          <div class="control" id="ridgeHeightControl"><label for="ridgeHeight">防脱棱高度</label><input id="ridgeHeight" type="number" min="0.4" max="0.8" step="0.1" value="0.4"><p class="control-note">平面倒钩内侧的圆钝小棱，增加振动退出的阻力；不建议做成尖角。</p></div>
+          <label class="inline-check"><span>生成末端拆卸拨片</span><input id="releaseTabs" type="checkbox" checked></label>
+        </div>
+      </details>
+
+      <section class="section">
+        <div class="section-heading"><strong>正面图案</strong><span>03 / PATTERN</span></div>
+        <div class="section-body">
+          <label class="upload-zone" id="uploadZone">
+            <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp">
+            <span class="upload-icon">↑</span>
+            <span><strong>上传黑白图案</strong><small id="uploadName">可选；图片始终只在本机处理</small></span>
+          </label>
+          <div class="pattern-row">
+            <canvas id="patternCanvas" width="192" height="192" aria-label="处理后的图案"></canvas>
+            <div>
+              <div class="mode-switch" role="radiogroup" aria-label="图案建模方式">
+                <label><input type="radio" name="patternMode" value="cut" checked><span>贯穿镂空</span></label>
+                <label><input type="radio" name="patternMode" value="relief"><span>浅浮雕</span></label>
+              </div>
+              <p class="control-note" id="patternStatus" style="margin-top:10px">未上传图案，将使用默认放射镂空。</p>
+            </div>
+          </div>
+          <details class="section" style="margin:0">
+            <summary>图案微调</summary>
+            <div class="section-body">
+              <div class="control"><label for="threshold">黑白阈值</label><input id="threshold" type="number" min="20" max="235" step="1" value="128"><input data-pair="threshold" type="range" min="20" max="235" step="1" value="128"></div>
+              <div class="control"><label for="smoothing">图案平滑</label><input id="smoothing" type="number" min="0" max="3" step="1" value="1"><input data-pair="smoothing" type="range" min="0" max="3" step="1" value="1"></div>
+              <label class="inline-check"><span>反转黑白区域</span><input id="invertPattern" type="checkbox"></label>
+              <div class="control" id="reliefControl" hidden><label for="reliefHeight">浮雕高度</label><input id="reliefHeight" type="number" min="0.3" max="3" step="0.1" value="0.8"><input data-pair="reliefHeight" type="range" min="0.3" max="3" step="0.1" value="0.8"></div>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <div class="export-dock">
+        <div class="export-status"><span>结构检查</span><strong id="qualityStatus">正在计算</strong></div>
+        <div class="export-row">
+          <button class="export-button" id="downloadStl" type="button">下载 STL</button>
+          <button class="export-button secondary" id="download3mf" type="button">下载 3MF</button>
+          <button class="export-button trial" id="downloadTrialStl" type="button">下载单组试装爪 STL · 含圆底座</button>
+        </div>
+        <p class="export-note" id="qualityDetail">导出前请先打印小样验证轮辐尺寸、拉脱力与车轮干涉。</p>
+      </div>
+    </aside>
+
+    <section class="workspace" aria-label="轮毂盖三维预览">
+      <div class="workspace-toolbar">
+        <div class="view-buttons">
+          <button class="view-button active" data-view="perspective" type="button">立体</button>
+          <button class="view-button" data-view="front" type="button">正面</button>
+          <button class="view-button" data-view="back" type="button">背面</button>
+          <button class="view-button" data-view="section" type="button">装配剖面</button>
+        </div>
+        <div class="toolbar-meta"><span>拖动旋转 · 滚轮缩放</span><button class="reset-button" id="resetView" type="button">复位视角</button></div>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="previewCanvas" aria-label="可旋转的轮毂盖三维预览"></canvas>
+        <span class="canvas-title">Hubcap assembly study</span>
+        <span class="edge-measure" id="edgeMeasure">外圈保留 8.0 mm</span>
+        <span class="canvas-hint">橙色：轮毂盖与双爪 / 青色：参考轮辐（不导出）</span>
+      </div>
+      <div class="metrics">
+        <div class="metric"><span>成品外径</span><strong id="metricDiameter">200.0 mm</strong></div>
+        <div class="metric"><span>总高度</span><strong id="metricHeight">—</strong></div>
+        <div class="metric"><span>卡扣分布</span><strong id="metricClips">5 / 5 组</strong></div>
+        <div class="metric"><span>模型网格</span><strong id="metricTriangles">—</strong></div>
+      </div>
+    </section>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script type="module">
+    "use strict";
+
+    import {
+      initializeGeometryKernel,
+      deriveStructure,
+      clipMetrics,
+      validateDesign,
+      validateTrialClip,
+      buildHubcapGeometry,
+      buildTrialClipGeometry,
+      trialBaseRadius
+    } from "./轮毂盖几何.js";
+
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => [...document.querySelectorAll(selector)];
+    const controls = {
+      coverDiameter: $("#coverDiameter"),
+      clipRadius: $("#clipRadius"), clipCount: $("#clipCount"), startAngle: $("#startAngle"), spokeWidth: $("#spokeWidth"),
+      spokeBackDepth: $("#spokeBackDepth"),
+      contactLength: $("#contactLength"), legThickness: $("#legThickness"), sideClearance: $("#sideClearance"),
+      engagement: $("#engagement"), hookHeight: $("#hookHeight"), chamfer: $("#chamfer"), rootHeight: $("#rootHeight"), clipDetailStatus: $("#clipDetailStatus"),
+      ridgeEnabled: $("#ridgeEnabled"), ridgeHeight: $("#ridgeHeight"), releaseTabs: $("#releaseTabs"),
+      threshold: $("#threshold"), smoothing: $("#smoothing"), invertPattern: $("#invertPattern"), reliefHeight: $("#reliefHeight"),
+      imageInput: $("#imageInput"), uploadZone: $("#uploadZone"), uploadName: $("#uploadName"), patternCanvas: $("#patternCanvas"),
+      patternStatus: $("#patternStatus"), reliefControl: $("#reliefControl"), previewCanvas: $("#previewCanvas"),
+      activeClipCount: $("#activeClipCount"), jawOpening: $("#jawOpening"), clipStrain: $("#clipStrain"), autoDimensions: $("#autoDimensions"),
+      clipGroupPicker: $("#clipGroupPicker"), edgeMeasure: $("#edgeMeasure"),
+      qualityStatus: $("#qualityStatus"), qualityDetail: $("#qualityDetail"),
+      metricDiameter: $("#metricDiameter"), metricHeight: $("#metricHeight"), metricClips: $("#metricClips"), metricTriangles: $("#metricTriangles"),
+      downloadStl: $("#downloadStl"), download3mf: $("#download3mf"), downloadTrialStl: $("#downloadTrialStl"), resetView: $("#resetView"), toast: $("#toast")
+    };
+
+    const state = {
+      image: null,
+      mask: null,
+      islandsRemoved: 0,
+      mesh: null,
+      exportTriangles: [],
+      exportMesh: null,
+      referenceTriangles: [],
+      validation: { valid: true, errors: [], warnings: [] },
+      gl: null,
+      yaw: -0.58,
+      pitch: 0.45,
+      zoom: 1,
+      dragging: false,
+      pointer: null,
+      renderFrame: 0,
+      rebuildTimer: 0,
+      bodyVertexCount: 0,
+      customClipSettings: false,
+      activeClipGroups: Array(5).fill(true),
+      geometryReady: false,
+      geometryBuilding: false,
+      geometryError: null,
+      geometryReport: null,
+      geometryVerification: null,
+      buildRevision: 0
+    };
+
+    function numberValue(control) { return Number(control.value); }
+    function currentMode() { return $("input[name='patternMode']:checked").value; }
+    function selectedPreset(name) { return $(`input[name='${name}']:checked`).value; }
+
+    function params() {
+      const custom = state.customClipSettings ? {
+        contactLength:numberValue(controls.contactLength),
+        legThickness:numberValue(controls.legThickness),
+        sideClearance:numberValue(controls.sideClearance),
+        engagement:numberValue(controls.engagement),
+        hookHeight:numberValue(controls.hookHeight),
+        chamfer:numberValue(controls.chamfer),
+        rootHeight:numberValue(controls.rootHeight)
+      } : null;
+      return deriveStructure({
+        coverDiameter:numberValue(controls.coverDiameter),
+        clipRadius:numberValue(controls.clipRadius),
+        clipCount:Math.round(numberValue(controls.clipCount)),
+        startAngle:numberValue(controls.startAngle) * Math.PI / 180,
+        spokeWidth:numberValue(controls.spokeWidth),
+        spokeBackDepth:numberValue(controls.spokeBackDepth),
+        strengthPreset:selectedPreset("strengthPreset"),
+        fitPreset:selectedPreset("fitPreset"),
+        reliefHeight:numberValue(controls.reliefHeight),
+        mode:currentMode(),
+        ridgeEnabled:controls.ridgeEnabled.checked,
+        ridgeHeight:numberValue(controls.ridgeHeight),
+        releaseTabs:controls.releaseTabs.checked
+      }, custom);
+    }
+
+    function syncCustomControls(p) {
+      if (state.customClipSettings) return;
+      ["contactLength", "legThickness", "sideClearance", "engagement", "hookHeight", "chamfer", "rootHeight"].forEach((name) => {
+        controls[name].value = Number(p[name].toFixed(2));
+      });
+      controls.clipDetailStatus.textContent = "跟随预设";
+    }
+
+    function activeClipIndices(p) {
+      return Array.from({ length:p.clipCount }, (_, index) => index).filter((index) => state.activeClipGroups[index] !== false);
+    }
+    function triangleNormal(a, b, c) {
+      const ux = b.x - a.x, uy = b.y - a.y, uz = b.z - a.z;
+      const vx = c.x - a.x, vy = c.y - a.y, vz = c.z - a.z;
+      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      const length = Math.hypot(nx, ny, nz) || 1;
+      return { x: nx / length, y: ny / length, z: nz / length };
+    }
+
+    async function rebuildMesh() {
+      const revision = ++state.buildRevision;
+      const p = params();
+      const activeIndices = activeClipIndices(p);
+      state.geometryBuilding = true;
+      state.geometryError = null;
+      state.geometryReport = null;
+      state.geometryVerification = null;
+      state.validation = validateDesign(p, activeIndices);
+      updateReadouts(p);
+      if (!state.validation.valid) {
+        state.geometryBuilding = false;
+        state.exportTriangles = [];
+        state.exportMesh = null;
+        state.referenceTriangles = [];
+        state.bodyVertexCount = 0;
+        state.mesh = makeRenderData([]);
+        updateReadouts(p);
+        uploadMesh();
+        requestRender();
+        return;
+      }
+      try {
+        const geometry = await buildHubcapGeometry(p, activeIndices, state.mask);
+        if (revision !== state.buildRevision) return;
+        state.geometryReport = {
+          ...geometry.report,
+          islandsRemoved:geometry.report.islandsRemoved + state.islandsRemoved
+        };
+        state.geometryVerification = geometry.verification;
+        state.validation = validateDesign(p, activeIndices, state.geometryReport);
+        state.exportTriangles = geometry.bodyTriangles;
+        state.exportMesh = geometry.exportMesh;
+        state.referenceTriangles = geometry.referenceTriangles;
+        state.bodyVertexCount = geometry.bodyTriangles.length * 3;
+        state.mesh = makeRenderData([...geometry.bodyTriangles, ...geometry.referenceTriangles]);
+      } catch (error) {
+        if (revision !== state.buildRevision) return;
+        state.geometryError = error instanceof Error ? error.message : String(error);
+        state.validation = { valid:false, errors:[`实体合并失败：${state.geometryError}`], warnings:[] };
+        state.exportTriangles = [];
+        state.exportMesh = null;
+        state.referenceTriangles = [];
+        state.bodyVertexCount = 0;
+        state.mesh = makeRenderData([]);
+      } finally {
+        if (revision !== state.buildRevision) return;
+        state.geometryBuilding = false;
+        updateReadouts(p);
+        uploadMesh();
+        requestRender();
+      }
+    }
+
+    function makeRenderData(triangles) {
+      const values = [];
+      triangles.forEach((triangle) => {
+        const normal = triangleNormal(triangle.a, triangle.b, triangle.c);
+        [triangle.a, triangle.b, triangle.c].forEach((point) => values.push(point.x, point.y, point.z, normal.x, normal.y, normal.z, ...triangle.color));
+      });
+      return new Float32Array(values);
+    }
+
+    function updateReadouts(p) {
+      const m = clipMetrics(p, activeClipIndices(p));
+      syncCustomControls(p);
+      controls.activeClipCount.textContent = `${m.enabled} / ${p.clipCount} 组`;
+      controls.jawOpening.textContent = `${m.jawOpening.toFixed(2)} mm`;
+      controls.clipStrain.textContent = `${p.estimatedStrain.toFixed(2)}%`;
+      controls.autoDimensions.textContent = `板 ${p.coverThickness.toFixed(1)} · 圈 ${p.outerRingWidth.toFixed(1)} · 爪根/末 ${p.legThickness.toFixed(1)}/${p.tipThickness.toFixed(1)} · 加强 ${p.rootHeight.toFixed(1)} mm`;
+      controls.edgeMeasure.textContent = `外圈保留 ${p.outerRingWidth.toFixed(1)} mm`;
+      controls.metricDiameter.textContent = `${p.coverDiameter.toFixed(1)} mm`;
+      controls.metricHeight.textContent = `${(p.spokeBackDepth + p.hookHeight + p.coverThickness + (p.mode === "relief" ? p.reliefHeight : 0)).toFixed(1)} mm`;
+      controls.metricClips.textContent = `${m.enabled} / ${p.clipCount} 组`;
+      controls.metricTriangles.textContent = state.geometryVerification
+        ? `封闭 · ${state.geometryVerification.triangleCount.toLocaleString()} triangles`
+        : (state.geometryBuilding ? "正在生成…" : "—");
+      renderClipGroupPicker(p);
+      const validation = state.validation;
+      const exportReady = validation.valid && !state.geometryBuilding && Boolean(state.geometryVerification);
+      controls.downloadStl.disabled = !exportReady;
+      controls.download3mf.disabled = !exportReady;
+      controls.downloadTrialStl.disabled = !state.geometryReady || !validateTrialClip(p).valid;
+      controls.downloadTrialStl.textContent = `下载单组试装爪 STL · 圆底座 Ø${(trialBaseRadius(p) * 2).toFixed(1)} mm`;
+      controls.qualityStatus.classList.toggle("error", !validation.valid || Boolean(state.geometryError));
+      if (state.geometryBuilding) controls.qualityStatus.textContent = "正在生成封闭实体";
+      else if (!validation.valid) controls.qualityStatus.textContent = `${validation.errors.length} 项需修正`;
+      else controls.qualityStatus.textContent = validation.warnings.length ? "单一封闭实体 · 有提示" : "单一封闭实体";
+      const verificationText = state.geometryVerification
+        ? `Manifold ${state.geometryVerification.status} · 1 个组件 · 0 条非流形边 · 最小壁厚 ${p.minWall.toFixed(1)} mm`
+        : "";
+      controls.qualityDetail.textContent = validation.errors[0] || validation.warnings[0] || verificationText || "导出前请先打印小样验证轮辐尺寸、拉脱力与车轮干涉。";
+    }
+
+    function renderClipGroupPicker(p) {
+      controls.clipGroupPicker.innerHTML = Array.from({ length: p.clipCount }, (_, index) => {
+        const active = state.activeClipGroups[index] !== false;
+        return `<button class="clip-group-button" type="button" data-clip-index="${index}" aria-pressed="${active}">C${index + 1}</button>`;
+      }).join("");
+    }
+
+    function resetClipGroups(count) {
+      state.activeClipGroups = Array(Math.max(3, Math.min(12, Math.round(count)))).fill(true);
+    }
+
+    function scheduleRebuild() {
+      clearTimeout(state.rebuildTimer);
+      state.rebuildTimer = setTimeout(() => { void rebuildMesh(); }, 120);
+    }
+
+    function processImage() {
+      const canvas = controls.patternCanvas;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      const size = canvas.width;
+      ctx.clearRect(0, 0, size, size);
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, size, size);
+      if (!state.image) {
+        ctx.strokeStyle = "#ec6a3a";
+        ctx.lineWidth = size * .115;
+        ctx.lineCap = "round";
+        for (let index = 0; index < 10; index += 1) {
+          const angle = Math.PI * 2 * (index + .5) / 10;
+          ctx.beginPath();
+          ctx.moveTo(size / 2 + Math.cos(angle) * size * .188, size / 2 + Math.sin(angle) * size * .188);
+          ctx.lineTo(size / 2 + Math.cos(angle) * size * .365, size / 2 + Math.sin(angle) * size * .365);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = "#d5cec1";
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(size / 2, size / 2, size * .438, 0, Math.PI * 2); ctx.stroke();
+        state.mask = null;
+        state.islandsRemoved = 0;
+        controls.patternStatus.textContent = currentMode() === "cut" ? "正在使用默认放射镂空。" : "默认放射区域将生成浮雕。";
+        scheduleRebuild();
+        return;
+      }
+      const scale = Math.min(size / state.image.naturalWidth, size / state.image.naturalHeight);
+      const width = state.image.naturalWidth * scale;
+      const height = state.image.naturalHeight * scale;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(state.image, (size - width) / 2, (size - height) / 2, width, height);
+      let pixels = ctx.getImageData(0, 0, size, size);
+      let luminance = new Float32Array(size * size);
+      for (let index = 0; index < luminance.length; index += 1) {
+        const offset = index * 4;
+        luminance[index] = pixels.data[offset] * .2126 + pixels.data[offset + 1] * .7152 + pixels.data[offset + 2] * .0722;
+      }
+      for (let pass = 0; pass < numberValue(controls.smoothing); pass += 1) {
+        const next = luminance.slice();
+        for (let y = 1; y < size - 1; y += 1) for (let x = 1; x < size - 1; x += 1) {
+          let sum = 0;
+          for (let oy = -1; oy <= 1; oy += 1) for (let ox = -1; ox <= 1; ox += 1) sum += luminance[(y + oy) * size + x + ox];
+          next[y * size + x] = sum / 9;
+        }
+        luminance = next;
+      }
+      const threshold = numberValue(controls.threshold);
+      const invert = controls.invertPattern.checked;
+      const data = new Uint8Array(size * size);
+      for (let index = 0; index < data.length; index += 1) data[index] = (luminance[index] < threshold) !== invert ? 1 : 0;
+      state.islandsRemoved = currentMode() === "cut" ? removeSolidIslands(data, size) : 0;
+      state.mask = { data, size };
+      pixels = ctx.createImageData(size, size);
+      for (let index = 0; index < data.length; index += 1) {
+        const value = data[index] ? 30 : 247;
+        pixels.data[index * 4] = data[index] ? 236 : value;
+        pixels.data[index * 4 + 1] = data[index] ? 106 : value;
+        pixels.data[index * 4 + 2] = data[index] ? 58 : value;
+        pixels.data[index * 4 + 3] = 255;
+      }
+      ctx.putImageData(pixels, 0, 0);
+      controls.patternStatus.textContent = state.islandsRemoved
+        ? `已自动移除 ${state.islandsRemoved} 个无法连接主体的孤岛。`
+        : `${currentMode() === "cut" ? "橙色区域将被切穿" : "橙色区域将生成浮雕"}。`;
+      scheduleRebuild();
+    }
+
+    function removeSolidIslands(mask, size) {
+      const connected = new Uint8Array(mask.length);
+      const queue = [];
+      const push = (index) => { if (!mask[index] && !connected[index]) { connected[index] = 1; queue.push(index); } };
+      for (let index = 0; index < size; index += 1) { push(index); push((size - 1) * size + index); push(index * size); push(index * size + size - 1); }
+      for (let cursor = 0; cursor < queue.length; cursor += 1) {
+        const index = queue[cursor], x = index % size, y = Math.floor(index / size);
+        if (x > 0) push(index - 1); if (x < size - 1) push(index + 1); if (y > 0) push(index - size); if (y < size - 1) push(index + size);
+      }
+      const visited = new Uint8Array(mask.length);
+      let islands = 0;
+      for (let start = 0; start < mask.length; start += 1) {
+        if (mask[start] || connected[start] || visited[start]) continue;
+        islands += 1;
+        const islandQueue = [start]; visited[start] = 1;
+        for (let cursor = 0; cursor < islandQueue.length; cursor += 1) {
+          const index = islandQueue[cursor], x = index % size, y = Math.floor(index / size);
+          mask[index] = 1;
+          const neighbours = [x > 0 ? index - 1 : -1, x < size - 1 ? index + 1 : -1, y > 0 ? index - size : -1, y < size - 1 ? index + size : -1];
+          neighbours.forEach((next) => { if (next >= 0 && !mask[next] && !connected[next] && !visited[next]) { visited[next] = 1; islandQueue.push(next); } });
+        }
+      }
+      return islands;
+    }
+
+    function compileShader(gl, type, source) {
+      const shader = gl.createShader(type); gl.shaderSource(shader, source); gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader) || "WebGL shader compilation failed");
+      return shader;
+    }
+
+    function createGl() {
+      const gl = controls.previewCanvas.getContext("webgl", { antialias: true, alpha: true });
+      if (!gl) return null;
+      const vertex = compileShader(gl, gl.VERTEX_SHADER, `
+        attribute vec3 aPosition; attribute vec3 aNormal; attribute vec4 aColor;
+        uniform mat4 uMatrix; uniform mat4 uModel;
+        varying vec3 vNormal; varying vec4 vColor; varying vec3 vPosition;
+        void main(){ vec4 world=uModel*vec4(aPosition,1.0); gl_Position=uMatrix*world; vPosition=world.xyz; vNormal=mat3(uModel)*aNormal; vColor=aColor; }
+      `);
+      const fragment = compileShader(gl, gl.FRAGMENT_SHADER, `
+        precision mediump float; varying vec3 vNormal; varying vec4 vColor; varying vec3 vPosition;
+        void main(){ vec3 n=normalize(vNormal); vec3 light=normalize(vec3(-.45,.72,.9)); float diffuse=.35+max(dot(n,light),0.0)*.65; float rim=pow(1.0-abs(n.z),2.0)*.12; gl_FragColor=vec4(vColor.rgb*(diffuse+rim),vColor.a); }
+      `);
+      const program = gl.createProgram(); gl.attachShader(program, vertex); gl.attachShader(program, fragment); gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+      return {
+        gl, program, buffer: gl.createBuffer(),
+        position: gl.getAttribLocation(program, "aPosition"), normal: gl.getAttribLocation(program, "aNormal"), color: gl.getAttribLocation(program, "aColor"),
+        matrix: gl.getUniformLocation(program, "uMatrix"), model: gl.getUniformLocation(program, "uModel"), count: 0
+      };
+    }
+
+    function uploadMesh() {
+      if (!state.gl) state.gl = createGl();
+      if (!state.gl || !state.mesh) return;
+      const { gl, buffer } = state.gl;
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, state.mesh, gl.STATIC_DRAW);
+      state.gl.count = state.mesh.length / 10;
+    }
+
+    function mat4Multiply(a, b) {
+      const out = new Float32Array(16);
+      for (let row = 0; row < 4; row += 1) for (let column = 0; column < 4; column += 1) {
+        out[column * 4 + row] = a[row] * b[column * 4] + a[4 + row] * b[column * 4 + 1] + a[8 + row] * b[column * 4 + 2] + a[12 + row] * b[column * 4 + 3];
+      }
+      return out;
+    }
+    function perspective(fov, aspect, near, far) {
+      const f = 1 / Math.tan(fov / 2), out = new Float32Array(16);
+      out[0] = f / aspect; out[5] = f; out[10] = (far + near) / (near - far); out[11] = -1; out[14] = 2 * far * near / (near - far); return out;
+    }
+    function lookAt(eye, center, up) {
+      let zx = eye[0] - center[0], zy = eye[1] - center[1], zz = eye[2] - center[2]; let length = Math.hypot(zx, zy, zz); zx /= length; zy /= length; zz /= length;
+      let xx = up[1] * zz - up[2] * zy, xy = up[2] * zx - up[0] * zz, xz = up[0] * zy - up[1] * zx; length = Math.hypot(xx, xy, xz); xx /= length; xy /= length; xz /= length;
+      const yx = zy * xz - zz * xy, yy = zz * xx - zx * xz, yz = zx * xy - zy * xx;
+      return new Float32Array([xx,yx,zx,0, xy,yy,zy,0, xz,yz,zz,0, -(xx*eye[0]+xy*eye[1]+xz*eye[2]), -(yx*eye[0]+yy*eye[1]+yz*eye[2]), -(zx*eye[0]+zy*eye[1]+zz*eye[2]),1]);
+    }
+    function identity() { return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]); }
+
+    function render() {
+      state.renderFrame = 0;
+      if (!state.gl || !state.mesh) return;
+      const { gl, program, buffer, position, normal, color, matrix, model, count } = state.gl;
+      const canvas = controls.previewCanvas;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const width = Math.max(1, Math.round(rect.width * dpr)), height = Math.max(1, Math.round(rect.height * dpr));
+      if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
+      gl.viewport(0, 0, width, height); gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.enable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.useProgram(program); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      const stride = 10 * 4;
+      gl.enableVertexAttribArray(position); gl.vertexAttribPointer(position, 3, gl.FLOAT, false, stride, 0);
+      gl.enableVertexAttribArray(normal); gl.vertexAttribPointer(normal, 3, gl.FLOAT, false, stride, 3 * 4);
+      gl.enableVertexAttribArray(color); gl.vertexAttribPointer(color, 4, gl.FLOAT, false, stride, 6 * 4);
+      const radius = params().coverDiameter / 2;
+      const distance = radius * 2.65 / state.zoom;
+      const eye = [distance * Math.cos(state.pitch) * Math.sin(state.yaw), distance * Math.sin(state.pitch), distance * Math.cos(state.pitch) * Math.cos(state.yaw)];
+      const projection = perspective(Math.PI / 4, width / height, Math.max(.1, radius * .01), radius * 12);
+      const view = lookAt(eye, [0,0,0], [0,1,0]);
+      gl.uniformMatrix4fv(matrix, false, mat4Multiply(projection, view));
+      gl.uniformMatrix4fv(model, false, identity());
+      gl.drawArrays(gl.TRIANGLES, 0, state.bodyVertexCount);
+      gl.depthMask(false);
+      gl.drawArrays(gl.TRIANGLES, state.bodyVertexCount, count - state.bodyVertexCount);
+      gl.depthMask(true);
+    }
+    function requestRender() { if (!state.renderFrame) state.renderFrame = requestAnimationFrame(render); }
+
+    function setView(view) {
+      $$(".view-button").forEach((button) => button.classList.toggle("active", button.dataset.view === view));
+      if (view === "front") { state.yaw = 0; state.pitch = 0; }
+      else if (view === "back") { state.yaw = Math.PI; state.pitch = 0; }
+      else if (view === "section") { state.yaw = Math.PI / 2; state.pitch = .03; }
+      else { state.yaw = -.58; state.pitch = .45; }
+      state.zoom = 1; requestRender();
+    }
+
+    function trianglesToBinaryStl(triangles) {
+      const buffer = new ArrayBuffer(84 + triangles.length * 50);
+      const bytes = new Uint8Array(buffer); const view = new DataView(buffer);
+      new TextEncoder().encode("Decorative stroller hubcap - non load bearing").slice(0, 80).forEach((byte, index) => { bytes[index] = byte; });
+      view.setUint32(80, triangles.length, true); let offset = 84;
+      triangles.forEach((triangle) => {
+        const normal = triangleNormal(triangle.a, triangle.b, triangle.c);
+        [normal, triangle.a, triangle.b, triangle.c].forEach((point) => { view.setFloat32(offset, point.x, true); view.setFloat32(offset + 4, point.y, true); view.setFloat32(offset + 8, point.z, true); offset += 12; });
+        view.setUint16(offset, 0, true); offset += 2;
+      });
+      return buffer;
+    }
+
+    const crc32Table = Array.from({ length: 256 }, (_, index) => { let value = index; for (let bit = 0; bit < 8; bit += 1) value = value & 1 ? 0xEDB88320 ^ value >>> 1 : value >>> 1; return value >>> 0; });
+    function crc32(bytes) { let value = 0xFFFFFFFF; bytes.forEach((byte) => { value = crc32Table[(value ^ byte) & 0xFF] ^ value >>> 8; }); return (value ^ 0xFFFFFFFF) >>> 0; }
+    function concatBytes(parts) { const result = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0)); let offset = 0; parts.forEach((part) => { result.set(part, offset); offset += part.length; }); return result; }
+    function createStoredZip(files) {
+      const encoder = new TextEncoder(), localParts = [], centralParts = []; let localOffset = 0;
+      files.forEach((file) => {
+        const name = encoder.encode(file.name), data = typeof file.content === "string" ? encoder.encode(file.content) : file.content, checksum = crc32(data);
+        const local = new Uint8Array(30 + name.length + data.length), lv = new DataView(local.buffer);
+        lv.setUint32(0,0x04034B50,true); lv.setUint16(4,20,true); lv.setUint16(6,0x0800,true); lv.setUint32(14,checksum,true); lv.setUint32(18,data.length,true); lv.setUint32(22,data.length,true); lv.setUint16(26,name.length,true); local.set(name,30); local.set(data,30+name.length);
+        const central = new Uint8Array(46 + name.length), cv = new DataView(central.buffer);
+        cv.setUint32(0,0x02014B50,true); cv.setUint16(4,20,true); cv.setUint16(6,20,true); cv.setUint16(8,0x0800,true); cv.setUint32(16,checksum,true); cv.setUint32(20,data.length,true); cv.setUint32(24,data.length,true); cv.setUint16(28,name.length,true); cv.setUint32(42,localOffset,true); central.set(name,46);
+        localParts.push(local); centralParts.push(central); localOffset += local.length;
+      });
+      const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0), end = new Uint8Array(22), ev = new DataView(end.buffer);
+      ev.setUint32(0,0x06054B50,true); ev.setUint16(8,files.length,true); ev.setUint16(10,files.length,true); ev.setUint32(12,centralSize,true); ev.setUint32(16,localOffset,true);
+      return concatBytes([...localParts, ...centralParts, end]);
+    }
+
+    function escapeXml(value) { return String(value).replace(/[&<>"']/g, (character) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&apos;" }[character])); }
+    function buildThreeMf() {
+      if (!state.exportMesh) throw new Error("封闭索引网格尚未生成");
+      const vertices = state.exportMesh.vertices;
+      const faces = state.exportMesh.triangles;
+      const vertexXml = vertices.map((v) => `<vertex x="${v[0].toFixed(6)}" y="${v[1].toFixed(6)}" z="${v[2].toFixed(6)}"/>`).join("");
+      const faceXml = faces.map((face) => `<triangle v1="${face[0]}" v2="${face[1]}" v3="${face[2]}"/>`).join("");
+      const p = params();
+      const enabled = activeClipIndices(p).length;
+      const strengthName = { easy:"容易拆装", balanced:"均衡", reinforced:"加强且可拆" }[p.strengthPreset];
+      const fitName = { tight:"偏紧", standard:"标准", loose:"偏松" }[p.fitPreset];
+      const clipDimensions = `径向宽度 ${p.contactLength} mm；根/末爪厚 ${p.legThickness}/${p.tipThickness} mm；间隙 ${p.sideClearance} mm；倒钩深度 ${p.engagement} mm；倒钩高度 ${p.hookHeight} mm；防脱棱 ${p.ridgeEnabled ? `${p.ridgeHeight} mm` : "关闭"}；拆卸拨片 ${p.releaseTabs ? "开启" : "关闭"}`;
+      const geometryCheck = state.geometryVerification ? `${state.geometryVerification.status}; components=${state.geometryVerification.componentCount}; invalidEdges=${state.geometryVerification.invalidEdges}` : "Unavailable";
+      const model = `<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="zh-CN" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Title">婴儿车装饰轮毂盖 ${p.coverDiameter}mm</metadata><metadata name="Application">婴儿车轮毂盖生成器</metadata><metadata name="Description">非承力装饰件；${enabled} 组轮辐双爪；${p.mode === "cut" ? "贯穿镂空" : "浅浮雕"}</metadata><metadata name="StrengthPreset">${strengthName}</metadata><metadata name="FitPreset">${fitName}</metadata><metadata name="ClipSettings">${state.customClipSettings ? "自定义" : "跟随预设"}</metadata><metadata name="ClipDimensions">${clipDimensions}</metadata><metadata name="EstimatedStrain">${p.estimatedStrain.toFixed(2)}%</metadata><metadata name="GeometryKernel">Manifold 3.5.1</metadata><metadata name="GeometryCheck">${geometryCheck}</metadata><resources><object id="1" type="model" name="${escapeXml(`轮毂盖-${enabled}组双爪`)}"><mesh><vertices>${vertexXml}</vertices><triangles>${faceXml}</triangles></mesh></object></resources><build><item objectid="1"/></build></model>`;
+      const types = `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>`;
+      const rels = `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>`;
+      return createStoredZip([{ name:"[Content_Types].xml", content:types }, { name:"_rels/.rels", content:rels }, { name:"3D/3dmodel.model", content:model }]);
+    }
+
+    function download(data, filename, type) {
+      const blob = data instanceof Blob ? data : new Blob([data], { type });
+      const url = URL.createObjectURL(blob), anchor = document.createElement("a");
+      anchor.href = url; anchor.download = filename; document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+    function filename(extension) { const p = params(); return `婴儿车轮毂盖-${p.coverDiameter}mm-${activeClipIndices(p).length}组双爪-${p.mode === "cut" ? "镂空" : "浮雕"}.${extension}`; }
+    function trialFilename() { const p = params(); return `单组试装双爪-轮辐${p.spokeWidth}mm-深度${p.spokeBackDepth}mm-倒钩${p.engagement}mm.stl`; }
+    function showToast(message) { controls.toast.textContent = message; controls.toast.classList.add("show"); clearTimeout(showToast.timer); showToast.timer = setTimeout(() => controls.toast.classList.remove("show"), 2400); }
+
+    $$('input[type="range"][data-pair]').forEach((range) => {
+      const number = $(`#${range.dataset.pair}`);
+      range.addEventListener("input", () => {
+        number.value = range.value;
+        if (range.dataset.pair === "clipCount") resetClipGroups(range.value);
+        if (["threshold", "smoothing"].includes(range.dataset.pair)) processImage(); else scheduleRebuild();
+      });
+      number.addEventListener("input", () => {
+        range.value = number.value;
+        if (range.dataset.pair === "clipCount") resetClipGroups(number.value);
+        if (["threshold", "smoothing"].includes(range.dataset.pair)) processImage(); else scheduleRebuild();
+      });
+    });
+    controls.clipGroupPicker.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-clip-index]");
+      if (!button) return;
+      const index = Number(button.dataset.clipIndex);
+      const activeCount = state.activeClipGroups.filter(Boolean).length;
+      if (state.activeClipGroups[index] && activeCount <= 3) return showToast("至少需要保留 3 组双爪卡扣");
+      state.activeClipGroups[index] = !state.activeClipGroups[index];
+      void rebuildMesh();
+    });
+    $$('input[name="patternMode"]').forEach((input) => input.addEventListener("change", () => { controls.reliefControl.hidden = currentMode() !== "relief"; processImage(); }));
+    $$('input[name="strengthPreset"], input[name="fitPreset"]').forEach((input) => input.addEventListener("change", () => {
+      state.customClipSettings = false;
+      controls.clipDetailStatus.textContent = "跟随预设";
+      scheduleRebuild();
+    }));
+    $$('[data-clip-custom]').forEach((input) => input.addEventListener("input", () => {
+      state.customClipSettings = true;
+      controls.clipDetailStatus.textContent = "自定义";
+      scheduleRebuild();
+    }));
+    controls.ridgeEnabled.addEventListener("change", () => {
+      controls.ridgeHeight.disabled = !controls.ridgeEnabled.checked;
+      scheduleRebuild();
+    });
+    controls.ridgeHeight.addEventListener("input", scheduleRebuild);
+    controls.releaseTabs.addEventListener("change", scheduleRebuild);
+    controls.invertPattern.addEventListener("change", processImage);
+    controls.imageInput.addEventListener("change", () => {
+      const file = controls.imageInput.files?.[0]; if (!file) return;
+      const image = new Image(); image.onload = () => { state.image = image; controls.uploadName.textContent = file.name; processImage(); URL.revokeObjectURL(image.src); }; image.src = URL.createObjectURL(file);
+    });
+    ["dragenter","dragover"].forEach((type) => controls.uploadZone.addEventListener(type, (event) => { event.preventDefault(); controls.uploadZone.classList.add("dragging"); }));
+    ["dragleave","drop"].forEach((type) => controls.uploadZone.addEventListener(type, (event) => { event.preventDefault(); controls.uploadZone.classList.remove("dragging"); }));
+    controls.uploadZone.addEventListener("drop", (event) => { const file = event.dataTransfer.files?.[0]; if (!file?.type.match(/^image\/(png|jpeg|webp)$/)) return showToast("请选择 PNG、JPEG 或 WebP 图片"); const transfer = new DataTransfer(); transfer.items.add(file); controls.imageInput.files = transfer.files; controls.imageInput.dispatchEvent(new Event("change")); });
+    $$(".view-button").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
+    controls.resetView.addEventListener("click", () => setView("perspective"));
+    controls.previewCanvas.addEventListener("pointerdown", (event) => { state.dragging = true; state.pointer = { x:event.clientX, y:event.clientY }; controls.previewCanvas.setPointerCapture(event.pointerId); });
+    controls.previewCanvas.addEventListener("pointermove", (event) => { if (!state.dragging) return; const dx = event.clientX - state.pointer.x, dy = event.clientY - state.pointer.y; state.pointer = { x:event.clientX, y:event.clientY }; state.yaw -= dx * .009; state.pitch = Math.max(-1.48, Math.min(1.48, state.pitch + dy * .009)); requestRender(); });
+    controls.previewCanvas.addEventListener("pointerup", () => { state.dragging = false; });
+    controls.previewCanvas.addEventListener("wheel", (event) => { event.preventDefault(); state.zoom = Math.max(.55, Math.min(2.2, state.zoom * Math.exp(-event.deltaY * .001))); requestRender(); }, { passive:false });
+    controls.downloadStl.addEventListener("click", () => { if (!state.validation.valid || !state.geometryVerification) return; download(trianglesToBinaryStl(state.exportTriangles), filename("stl"), "application/octet-stream"); showToast("STL 已导出，请先打印小样试装"); });
+    controls.download3mf.addEventListener("click", () => { if (!state.validation.valid || !state.geometryVerification) return; download(buildThreeMf(), filename("3mf"), "model/3mf"); showToast("3MF 已导出，请先打印小样试装"); });
+    controls.downloadTrialStl.addEventListener("click", async () => {
+      const p = params();
+      if (!validateTrialClip(p).valid) return;
+      controls.downloadTrialStl.disabled = true;
+      try {
+        const trial = await buildTrialClipGeometry(p);
+        download(trianglesToBinaryStl(trial.triangles), trialFilename(), "application/octet-stream");
+        showToast(`单组试装爪已导出：${trial.verification.componentCount} 个封闭实体，圆底座已朝向打印平台`);
+      } catch (error) {
+        showToast(`试装件生成失败：${error instanceof Error ? error.message : String(error)}`);
+      } finally {
+        controls.downloadTrialStl.disabled = !validateTrialClip(params()).valid;
+      }
+    });
+    window.addEventListener("resize", requestRender);
+
+    async function initializeApp() {
+      try {
+        await initializeGeometryKernel();
+        state.geometryReady = true;
+        processImage();
+      } catch (error) {
+        state.geometryError = error instanceof Error ? error.message : String(error);
+        state.validation = { valid:false, errors:[`几何内核加载失败：${state.geometryError}`], warnings:[] };
+        updateReadouts(params());
+      }
+    }
+
+    controls.ridgeHeight.disabled = !controls.ridgeEnabled.checked;
+    void initializeApp();
+  </script>
+</body>
+</html>

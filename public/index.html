@@ -319,6 +319,23 @@
     .tool-card:hover .art-puzzle .piece-c { transform: translate(-7px, 8px) rotate(4deg); }
     .tool-card:hover .art-puzzle .piece-d { transform: translate(8px, 7px) rotate(-5deg); }
 
+    .art-hubcap .hub-ring,
+    .art-hubcap .hub-face,
+    .art-hubcap .hub-guide,
+    .art-hubcap .hub-clip {
+      transform-box: fill-box;
+      transform-origin: center;
+      transition: transform 650ms cubic-bezier(.2, .75, .2, 1), stroke 320ms ease;
+    }
+
+    .art-hubcap .hub-ring { fill: none; stroke: var(--ink); stroke-width: 22; }
+    .art-hubcap .hub-face { fill: var(--paper-light); stroke: var(--ink); stroke-width: 3; }
+    .art-hubcap .hub-guide { fill: none; stroke: var(--jade); stroke-width: 3; stroke-dasharray: 7 7; }
+    .art-hubcap .hub-clip { fill: var(--copper); }
+    .tool-card:hover .art-hubcap .hub-ring { transform: rotate(8deg); }
+    .tool-card:hover .art-hubcap .hub-face { transform: scale(.96); }
+    .tool-card:hover .art-hubcap .hub-clip { transform: scale(1.08); }
+
     .card-body {
       position: relative;
       z-index: 2;
@@ -615,6 +632,37 @@
             <div>
               <h3 class="card-title">拼图生成器</h3>
               <p class="card-description">生成真正可拆装的独立拼片，支持打乱打印与带编号的分区背板。</p>
+            </div>
+            <span class="card-arrow" aria-hidden="true">↗</span>
+          </div>
+        </a>
+
+        <a class="tool-card reveal" href="./轮毂盖生成器.html" aria-label="进入婴儿车轮毂盖生成器">
+          <div class="card-top">
+            <span class="card-index">04</span>
+            <span class="card-kind">Measure / Snap-fit</span>
+          </div>
+          <div class="card-art art-hubcap" aria-hidden="true">
+            <svg viewBox="0 0 460 380" role="img">
+              <circle class="hub-ring" cx="230" cy="190" r="116"/>
+              <circle class="hub-face" cx="230" cy="190" r="91"/>
+              <g class="hub-guide">
+                <path d="M230 99v182M139 190h182M166 126l128 128M294 126 166 254"/>
+              </g>
+              <g>
+                <rect class="hub-clip" x="217" y="102" width="26" height="23" rx="5"/>
+                <rect class="hub-clip" x="217" y="255" width="26" height="23" rx="5"/>
+                <rect class="hub-clip" x="294" y="178" width="26" height="23" rx="5" transform="rotate(90 307 189.5)"/>
+                <rect class="hub-clip" x="140" y="178" width="26" height="23" rx="5" transform="rotate(90 153 189.5)"/>
+              </g>
+              <path d="M230 139v102M179 190h102" fill="none" stroke="var(--ink)" stroke-width="7" stroke-linecap="round"/>
+              <circle cx="230" cy="190" r="17" fill="var(--copper)"/>
+            </svg>
+          </div>
+          <div class="card-body">
+            <div>
+              <h3 class="card-title">轮毂盖生成器</h3>
+              <p class="card-description">根据实测轮辐生成可调双长爪卡扣，支持局部镂空、浅浮雕与 STL / 3MF 导出。</p>
             </div>
             <span class="card-arrow" aria-hidden="true">↗</span>
           </div>
