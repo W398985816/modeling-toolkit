@@ -40,8 +40,6 @@ export function deriveStructure(raw, custom = null) {
     hookReach:fit.hookReach,
     hookHeight:Math.max(1.4, fit.hookReach + .6),
     insertionRampHeight:fit.hookReach + fit.sideClearance,
-    ridgeHeight:raw.ridgeHeight ?? .4,
-    ridgeEnabled:raw.ridgeEnabled ?? true,
     releaseTabs:raw.releaseTabs ?? true,
     minWall:1.2,
     nozzleWidth:.4,
@@ -93,8 +91,6 @@ export function validateDesign(p, activeIndices, patternReport = null) {
   if (p.hookReach > p.legThickness * 1.25) errors.push("倒钩外伸量相对爪片厚度过大，根部应力过高");
   if (p.insertionRampHeight < p.hookReach + p.sideClearance) errors.push("导入斜面过陡；高度应不小于装配间隙与倒钩外伸量之和");
   if (p.insertionRampHeight > p.hookHeight) errors.push("导入斜面高度不能超过倒钩轴向高度");
-  if (p.ridgeEnabled && p.ridgeHeight < p.layerHeight * 2) errors.push("防脱棱高度至少需要 2 层打印高度");
-  if (p.ridgeEnabled && p.ridgeHeight > p.hookReach) errors.push("防脱棱高度不能大于倒钩外伸量");
   if (p.retentionArea < 6) warnings.push("单爪承力面积偏小，建议增加倒钩外伸量或爪片径向宽度");
   if (p.estimatedStrain > 3) errors.push(`预计卡爪应变 ${p.estimatedStrain.toFixed(1)}%，超过 PETG 设计筛查上限 3%`);
   else if (p.estimatedStrain > 2) warnings.push(`预计卡爪应变 ${p.estimatedStrain.toFixed(1)}%，建议先打印单组试装`);
@@ -118,8 +114,6 @@ export function validateTrialClip(p) {
   if (p.openingWidth - 2 * (p.sideClearance + p.tipThickness) < Math.max(2, p.releaseTabLength * 2 + 1)) errors.push("轮辐开口无法容纳双爪和拆卸拨片");
   if (p.hookReach < .3 || p.hookReach > p.legThickness * 1.25) errors.push("倒钩外伸量无效");
   if (p.insertionRampHeight < p.hookReach + p.sideClearance || p.insertionRampHeight > p.hookHeight) errors.push("倒钩导入斜面尺寸无效");
-  if (p.ridgeEnabled && p.ridgeHeight < p.layerHeight * 2) errors.push("防脱棱不足两层高度");
-  if (p.ridgeEnabled && p.ridgeHeight > p.hookReach) errors.push("防脱棱高度不能大于倒钩外伸量");
   if (p.estimatedStrain > 3) errors.push("预计卡爪应变超过 3%");
   return { valid:errors.length === 0, errors };
 }
@@ -207,8 +201,6 @@ function buildHook(wasm, p, angle, side) {
   const armOuter = edge - p.sideClearance;
   const armInner = armOuter - p.tipThickness;
   const hookOuter = edge + p.hookReach;
-  const ridgeTangentRadius = p.ridgeEnabled ? Math.min(p.hookReach * .38, p.ridgeHeight * .55) : 0;
-  const ridgeAxialRadius = p.ridgeEnabled ? p.ridgeHeight * .65 : 0;
   const backFace = -p.spokeBackDepth;
   const leadingFace = backFace - p.hookHeight;
   const profile = [
@@ -222,18 +214,6 @@ function buildHook(wasm, p, angle, side) {
   const radial0 = p.clipRadius - p.tipWidth / 2;
   const radial1 = p.clipRadius + p.tipWidth / 2;
   const parts = [manifoldFromProfilePrism(wasm, angle, radial0, radial1, orientedProfile)];
-  if (ridgeTangentRadius > 0) {
-    const ridgeCenter = edge + p.hookReach * .5;
-    const circle = Array.from({ length:12 }, (_, index) => {
-      const theta = Math.PI * 2 * index / 12;
-      return {
-        t:ridgeCenter + Math.cos(theta) * ridgeTangentRadius,
-        z:backFace + p.ridgeHeight * .35 + Math.sin(theta) * ridgeAxialRadius
-      };
-    });
-    const orientedCircle = side > 0 ? circle : circle.map((point) => ({ t:-point.t, z:point.z })).reverse();
-    parts.push(manifoldFromProfilePrism(wasm, angle, radial0, radial1, orientedCircle));
-  }
   if (p.releaseTabs) {
     const angleDegrees = degrees(angle);
     const tabWidth = Math.max(7, p.tipWidth * .58);

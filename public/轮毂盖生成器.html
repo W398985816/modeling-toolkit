@@ -177,8 +177,50 @@
     .upload-zone strong, .upload-zone small { display: block; }
     .upload-zone strong { margin-bottom: 3px; font-size: 12px; }
     .upload-zone small { color: var(--ink-soft); font-size: 10px; }
-    .pattern-row { display: grid; grid-template-columns: 96px 1fr; gap: 12px; }
-    #patternCanvas { width: 96px; height: 96px; border: 1px solid var(--line); background: white; image-rendering: auto; }
+    .pattern-row { display: grid; gap: 12px; }
+    .pattern-editor { display: grid; gap: 8px; }
+    .pattern-editor.expanded {
+      position: fixed;
+      z-index: 80;
+      inset: 16px;
+      width: min(760px, calc(100vw - 32px));
+      margin: auto;
+      padding: 14px;
+      border: 1px solid var(--ink);
+      background: var(--paper);
+      box-shadow: 0 24px 80px rgba(28, 34, 33, .28);
+      overflow: auto;
+    }
+    .pattern-editor.expanded #patternCanvas { width: auto; max-width: 100%; max-height: calc(100vh - 330px); margin: auto; }
+    body.pattern-editing { overflow: hidden; }
+    .pattern-canvas-wrap { position: relative; border: 1px solid var(--line); background: #fff; }
+    #patternCanvas { display: block; width: 100%; height: auto; aspect-ratio: 1; background: white; cursor: crosshair; image-rendering: auto; touch-action: none; }
+    .pattern-canvas-wrap[data-view="source"] #patternCanvas { cursor: default; }
+    .pattern-tools, .pattern-actions, .island-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    .pattern-tool, .pattern-action {
+      min-height: 32px;
+      padding: 0 9px;
+      border: 1px solid var(--line);
+      color: var(--ink-soft);
+      background: #fffdf8;
+      cursor: pointer;
+      font: 600 10px var(--mono);
+    }
+    .pattern-tool.active, .pattern-tool[aria-pressed="true"] { border-color: var(--teal); color: white; background: var(--teal); }
+    .pattern-action:disabled, .pattern-tool:disabled { cursor: not-allowed; opacity: .4; }
+    .pattern-view-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; border: 1px solid var(--line); background: var(--line); }
+    .pattern-view-tabs button { min-height: 30px; border: 0; color: var(--ink-soft); background: #fffdf8; cursor: pointer; font-size: 10px; }
+    .pattern-view-tabs button.active { color: white; background: var(--ink); }
+    .editor-size-row { display: grid; grid-template-columns: 72px 68px 1fr; gap: 8px; align-items: center; color: var(--ink-soft); font-size: 10px; }
+    .editor-size-row input[type="number"] { width: 100%; min-width: 0; }
+    .island-panel { display: grid; gap: 7px; padding: 9px; border: 1px solid var(--line); background: var(--paper-deep); }
+    .island-panel[hidden] { display: none; }
+    .island-summary { display: flex; justify-content: space-between; gap: 10px; color: var(--ink-soft); font-size: 10px; }
+    .pattern-legend { display: flex; flex-wrap: wrap; gap: 10px; color: var(--ink-soft); font-size: 9px; }
+    .pattern-legend span::before { display: inline-block; width: 8px; height: 8px; margin-right: 4px; content: ""; }
+    .pattern-legend .cut::before { background: var(--orange); }
+    .pattern-legend .solid::before { background: #f7f3ea; border: 1px solid var(--line); }
+    .pattern-legend .island::before { background: var(--danger); }
     .mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; border: 1px solid var(--line); background: var(--line); }
     .mode-switch label { position: relative; cursor: pointer; }
     .mode-switch input { position: absolute; opacity: 0; }
@@ -415,8 +457,6 @@
           <div class="control"><label for="hookHeight">倒钩轴向高度</label><input id="hookHeight" data-clip-custom type="number" min="0.8" max="4" step="0.1" value="1.4"><p class="control-note">从轮辐背面承力面到倒钩最深端的高度。</p></div>
           <div class="control"><label for="insertionRampHeight">导入斜面高度</label><input id="insertionRampHeight" data-clip-custom type="number" min="0.3" max="4" step="0.1" value="1.15"><p class="control-note">必须覆盖装配间隙与外伸量，保证插入坡度不陡于约 45°。</p></div>
           <div class="control"><label for="rootHeight">根部加强高度</label><input id="rootHeight" data-clip-custom type="number" min="2" max="10" step="0.5" value="5"></div>
-          <label class="inline-check"><span>圆钝防脱棱</span><input id="ridgeEnabled" type="checkbox" checked></label>
-          <div class="control" id="ridgeHeightControl"><label for="ridgeHeight">防脱棱高度</label><input id="ridgeHeight" type="number" min="0.4" max="0.8" step="0.1" value="0.4"><p class="control-note">圆钝小棱位于向外倒钩的背面承力区，形成预紧并阻碍振动退出；不会伸向中间空腔。</p></div>
           <label class="inline-check"><span>生成向内捏合拆卸片</span><input id="releaseTabs" type="checkbox" checked></label>
           <p class="control-note">拆卸时从轮后同时将两片向开口中心捏合，再把轮毂盖向前推出；不要从盖板单边硬撬。</p>
         </div>
@@ -430,14 +470,43 @@
             <span class="upload-icon">↑</span>
             <span><strong>上传黑白图案</strong><small id="uploadName">可选；图片始终只在本机处理</small></span>
           </label>
+          <div class="mode-switch" role="radiogroup" aria-label="图案建模方式">
+            <label><input type="radio" name="patternMode" value="cut" checked><span>贯穿镂空</span></label>
+            <label><input type="radio" name="patternMode" value="relief"><span>浅浮雕</span></label>
+          </div>
+          <p class="control-note" id="patternStatus">未上传图案，将使用默认放射镂空。</p>
           <div class="pattern-row">
-            <canvas id="patternCanvas" width="384" height="384" aria-label="处理后的图案"></canvas>
-            <div>
-              <div class="mode-switch" role="radiogroup" aria-label="图案建模方式">
-                <label><input type="radio" name="patternMode" value="cut" checked><span>贯穿镂空</span></label>
-                <label><input type="radio" name="patternMode" value="relief"><span>浅浮雕</span></label>
+            <div class="pattern-editor" id="patternEditor">
+              <div class="pattern-view-tabs" role="tablist" aria-label="图案预览模式">
+                <button type="button" data-pattern-view="source">原图</button>
+                <button class="active" type="button" data-pattern-view="mask">镂空编辑</button>
               </div>
-              <p class="control-note" id="patternStatus" style="margin-top:10px">未上传图案，将使用默认放射镂空。</p>
+              <div class="pattern-canvas-wrap" id="patternCanvasWrap" data-view="mask">
+                <canvas id="patternCanvas" width="512" height="512" aria-label="可编辑的镂空图案"></canvas>
+              </div>
+              <div class="pattern-legend"><span class="cut">镂空</span><span class="solid">保留实体</span><span class="island">未连接孤岛</span></div>
+              <div class="pattern-tools" role="toolbar" aria-label="镂空编辑工具">
+                <button class="pattern-tool active" id="cutBrush" type="button" data-pattern-tool="cut" aria-pressed="true">增加镂空</button>
+                <button class="pattern-tool" id="smoothCutBrush" type="button" data-pattern-tool="smoothCut" aria-pressed="false">平滑镂空</button>
+                <button class="pattern-tool" id="solidBrush" type="button" data-pattern-tool="solid" aria-pressed="false">补回实体</button>
+                <button class="pattern-tool" id="bridgeBrush" type="button" data-pattern-tool="bridge" aria-pressed="false">连接桥</button>
+              </div>
+              <label class="editor-size-row"><span id="brushSizeLabel">笔触宽度</span><input id="brushSize" type="number" min="0.4" max="12" step="0.1" value="1.2"><input data-pair="brushSize" type="range" min="0.4" max="12" step="0.1" value="1.2"></label>
+              <div class="pattern-actions">
+                <button class="pattern-action" id="undoPattern" type="button" disabled>撤销</button>
+                <button class="pattern-action" id="redoPattern" type="button" disabled>重做</button>
+                <button class="pattern-action" id="clearPatternEdits" type="button" disabled>清除手工编辑</button>
+                <button class="pattern-action" id="expandPatternEditor" type="button">放大编辑</button>
+              </div>
+              <div class="island-panel" id="islandPanel" hidden>
+                <div class="island-summary"><span>未连接实体孤岛</span><strong id="islandCounter">0 / 0</strong></div>
+                <div class="island-actions">
+                  <button class="pattern-action" id="previousIsland" type="button">上一个</button>
+                  <button class="pattern-action" id="nextIsland" type="button">下一个</button>
+                  <button class="pattern-action" id="autoBridgeIsland" type="button">自动加桥</button>
+                  <button class="pattern-action" id="deleteIsland" type="button">删除孤岛</button>
+                </div>
+              </div>
             </div>
           </div>
           <div class="control"><label for="patternScale">图案比例</label><input id="patternScale" type="number" min="30" max="100" step="1" value="100"><input data-pair="patternScale" type="range" min="30" max="100" step="1" value="100"><p class="control-note">相对于外圈以内可用图案区域的占比；缩小后保持居中，不影响外圈和卡爪根部保护区。</p></div>
@@ -445,6 +514,11 @@
             <summary>图案微调</summary>
             <div class="section-body">
               <div class="control"><label for="threshold">黑白阈值</label><input id="threshold" type="number" min="20" max="235" step="1" value="128"><input data-pair="threshold" type="range" min="20" max="235" step="1" value="128"></div>
+              <div class="control"><label for="samplingResolution">细节采样</label><input id="samplingResolution" type="number" min="256" max="1024" step="128" value="512"><input data-pair="samplingResolution" type="range" min="256" max="1024" step="128" value="512"><p class="control-note">提高可保留更细的轮廓，但模型生成时间和三角面数量也会增加。</p></div>
+              <div class="control"><label for="cleanup">杂点清理</label><input id="cleanup" type="number" min="0" max="12" step="1" value="3"><input data-pair="cleanup" type="range" min="0" max="12" step="1" value="3"></div>
+              <div class="control"><label for="closeStrength">镂空闭合</label><input id="closeStrength" type="number" min="0" max="12" step="1" value="0"><input data-pair="closeStrength" type="range" min="0" max="12" step="1" value="0"><p class="control-note">连接相邻黑色区域、填补细小裂缝；过高可能让分离图案粘连。</p></div>
+              <div class="control"><label for="minHoleArea">最小镂空面积 mm²</label><input id="minHoleArea" type="number" min="0" max="20" step="0.1" value="0.5"><input data-pair="minHoleArea" type="range" min="0" max="20" step="0.1" value="0.5"></div>
+              <div class="control"><label for="hollowExpansion">镂空扩张 mm</label><input id="hollowExpansion" type="number" min="-2" max="4" step="0.05" value="0"><input data-pair="hollowExpansion" type="range" min="-2" max="4" step="0.05" value="0"><p class="control-note">正值扩大镂空，负值收缩镂空；用于补偿细线和打印孔径。</p></div>
               <div class="control"><label for="smoothing">轮廓平滑</label><input id="smoothing" type="number" min="0" max="8" step="1" value="3"><input data-pair="smoothing" type="range" min="0" max="8" step="1" value="3"><p class="control-note">去除锯齿、小缺口和扫描噪点；数值越大越圆滑，也越可能损失尖细细节。</p></div>
               <label class="inline-check"><span>反转黑白区域</span><input id="invertPattern" type="checkbox"></label>
               <div class="control" id="reliefControl" hidden><label for="reliefHeight">浮雕高度</label><input id="reliefHeight" type="number" min="0.3" max="3" step="0.1" value="0.8"><input data-pair="reliefHeight" type="range" min="0.3" max="3" step="0.1" value="0.8"></div>
@@ -512,10 +586,13 @@
       spokeBackDepth: $("#spokeBackDepth"),
       contactLength: $("#contactLength"), legThickness: $("#legThickness"), sideClearance: $("#sideClearance"),
       hookReach: $("#hookReach"), hookHeight: $("#hookHeight"), insertionRampHeight: $("#insertionRampHeight"), rootHeight: $("#rootHeight"), clipDetailStatus: $("#clipDetailStatus"),
-      ridgeEnabled: $("#ridgeEnabled"), ridgeHeight: $("#ridgeHeight"), releaseTabs: $("#releaseTabs"),
-      patternScale: $("#patternScale"), threshold: $("#threshold"), smoothing: $("#smoothing"), invertPattern: $("#invertPattern"), reliefHeight: $("#reliefHeight"),
+      releaseTabs: $("#releaseTabs"),
+      patternScale: $("#patternScale"), threshold: $("#threshold"), samplingResolution: $("#samplingResolution"), cleanup: $("#cleanup"), closeStrength: $("#closeStrength"), minHoleArea: $("#minHoleArea"), hollowExpansion: $("#hollowExpansion"), smoothing: $("#smoothing"), invertPattern: $("#invertPattern"), reliefHeight: $("#reliefHeight"),
       imageInput: $("#imageInput"), uploadZone: $("#uploadZone"), uploadName: $("#uploadName"), patternCanvas: $("#patternCanvas"),
-      patternStatus: $("#patternStatus"), reliefControl: $("#reliefControl"), previewCanvas: $("#previewCanvas"),
+      patternCanvasWrap: $("#patternCanvasWrap"), patternEditor: $("#patternEditor"), patternStatus: $("#patternStatus"), reliefControl: $("#reliefControl"), previewCanvas: $("#previewCanvas"),
+      cutBrush: $("#cutBrush"), smoothCutBrush: $("#smoothCutBrush"), solidBrush: $("#solidBrush"), bridgeBrush: $("#bridgeBrush"), brushSize: $("#brushSize"), brushSizeLabel: $("#brushSizeLabel"),
+      undoPattern: $("#undoPattern"), redoPattern: $("#redoPattern"), clearPatternEdits: $("#clearPatternEdits"), expandPatternEditor: $("#expandPatternEditor"),
+      islandPanel: $("#islandPanel"), islandCounter: $("#islandCounter"), previousIsland: $("#previousIsland"), nextIsland: $("#nextIsland"), autoBridgeIsland: $("#autoBridgeIsland"), deleteIsland: $("#deleteIsland"),
       activeClipCount: $("#activeClipCount"), jawOpening: $("#jawOpening"), clipStrain: $("#clipStrain"), autoDimensions: $("#autoDimensions"),
       clipGroupPicker: $("#clipGroupPicker"), edgeMeasure: $("#edgeMeasure"),
       qualityStatus: $("#qualityStatus"), qualityDetail: $("#qualityDetail"),
@@ -525,8 +602,18 @@
 
     const state = {
       image: null,
+      sourcePreview: null,
+      baseMask: null,
       mask: null,
-      islandsRemoved: 0,
+      solidIslands: [],
+      exteriorSolid: null,
+      selectedIsland: 0,
+      patternView: "mask",
+      patternTool: "cut",
+      patternEdits: [],
+      patternUndo: [],
+      patternRedo: [],
+      patternDraft: null,
       mesh: null,
       exportTriangles: [],
       exportMesh: null,
@@ -578,10 +665,13 @@
         fitPreset:selectedPreset("fitPreset"),
         patternScale:currentPatternScale(),
         patternSmoothing:currentPatternSmoothing(),
+        samplingResolution:Math.round(numberValue(controls.samplingResolution)),
+        cleanup:Math.round(numberValue(controls.cleanup)),
+        closeStrength:Math.round(numberValue(controls.closeStrength)),
+        minHoleArea:numberValue(controls.minHoleArea),
+        hollowExpansion:numberValue(controls.hollowExpansion),
         reliefHeight:numberValue(controls.reliefHeight),
         mode:currentMode(),
-        ridgeEnabled:controls.ridgeEnabled.checked,
-        ridgeHeight:numberValue(controls.ridgeHeight),
         releaseTabs:controls.releaseTabs.checked
       }, custom);
     }
@@ -630,10 +720,7 @@
       try {
         const geometry = await buildHubcapGeometry(p, activeIndices, state.mask);
         if (revision !== state.buildRevision) return;
-        state.geometryReport = {
-          ...geometry.report,
-          islandsRemoved:geometry.report.islandsRemoved + state.islandsRemoved
-        };
+        state.geometryReport = geometry.report;
         state.geometryVerification = geometry.verification;
         state.validation = validateDesign(p, activeIndices, state.geometryReport);
         state.exportTriangles = geometry.bodyTriangles;
@@ -715,6 +802,16 @@
       state.rebuildTimer = setTimeout(() => { void rebuildMesh(); }, 120);
     }
 
+    function patternPhysicalSize() {
+      const p = deriveStructure({
+        coverDiameter:numberValue(controls.coverDiameter),
+        spokeBackDepth:numberValue(controls.spokeBackDepth),
+        strengthPreset:selectedPreset("strengthPreset"),
+        fitPreset:selectedPreset("fitPreset")
+      });
+      return Math.max(8, (p.coverDiameter - p.outerRingWidth * 2) * currentPatternScale());
+    }
+
     function drawPatternPreview(mask) {
       const canvas = controls.patternCanvas;
       const ctx = canvas.getContext("2d", { willReadFrequently: true });
@@ -723,7 +820,13 @@
       ctx.fillStyle = "white";
       ctx.fillRect(0, 0, size, size);
       const scale = currentPatternScale();
-      if (!mask) {
+      const targetSize = size * scale;
+      const targetOffset = (size - targetSize) / 2;
+      if (state.patternView === "source" && state.sourcePreview) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(state.sourcePreview, targetOffset, targetOffset, targetSize, targetSize);
+      } else if (!mask) {
         ctx.strokeStyle = "#ec6a3a";
         ctx.lineWidth = size * .115 * scale;
         ctx.lineCap = "round";
@@ -740,31 +843,42 @@
         source.height = size;
         const sourceCtx = source.getContext("2d");
         const preview = sourceCtx.createImageData(size, size);
+        const islandMap = new Uint8Array(mask.length);
+        state.solidIslands.forEach((island, islandIndex) => island.forEach((pixel) => { islandMap[pixel] = islandIndex === state.selectedIsland ? 2 : 1; }));
         for (let index = 0; index < mask.length; index += 1) {
-          const value = mask[index] ? 30 : 247;
-          preview.data[index * 4] = mask[index] ? 236 : value;
-          preview.data[index * 4 + 1] = mask[index] ? 106 : value;
-          preview.data[index * 4 + 2] = mask[index] ? 58 : value;
+          const color = islandMap[index] === 2 ? [242,148,24] : islandMap[index] === 1 ? [206,83,74] : mask[index] ? [236,106,58] : [247,243,234];
+          preview.data[index * 4] = color[0];
+          preview.data[index * 4 + 1] = color[1];
+          preview.data[index * 4 + 2] = color[2];
           preview.data[index * 4 + 3] = 255;
         }
         sourceCtx.putImageData(preview, 0, 0);
-        const targetSize = size * scale;
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(source, (size - targetSize) / 2, (size - targetSize) / 2, targetSize, targetSize);
+        ctx.drawImage(source, targetOffset, targetOffset, targetSize, targetSize);
       }
       ctx.strokeStyle = "#d5cec1";
-      ctx.lineWidth = Math.max(1, size / 192);
+      ctx.lineWidth = Math.max(1, size / 256);
       ctx.beginPath(); ctx.arc(size / 2, size / 2, size * .438, 0, Math.PI * 2); ctx.stroke();
     }
 
     function processImage() {
+      const requestedValue = numberValue(controls.samplingResolution);
+      const requestedSize = Number.isFinite(requestedValue)
+        ? Math.max(256, Math.min(1024, Math.round(requestedValue / 128) * 128))
+        : 512;
+      controls.samplingResolution.value = requestedSize;
       const canvas = controls.patternCanvas;
+      if (canvas.width !== requestedSize) canvas.width = canvas.height = requestedSize;
       const size = canvas.width;
       if (!state.image) {
-        drawPatternPreview(null);
+        state.sourcePreview = null;
+        state.baseMask = null;
         state.mask = null;
-        state.islandsRemoved = 0;
+        state.solidIslands = [];
+        state.exteriorSolid = null;
+        drawPatternPreview(null);
+        updatePatternEditorControls();
         controls.patternStatus.textContent = `${currentMode() === "cut" ? "正在使用默认放射镂空" : "默认放射区域将生成浮雕"} · 比例 ${(currentPatternScale() * 100).toFixed(0)}%。`;
         scheduleRebuild();
         return;
@@ -775,13 +889,14 @@
       const ctx = workCanvas.getContext("2d", { willReadFrequently: true });
       ctx.fillStyle = "white";
       ctx.fillRect(0, 0, size, size);
-      const scale = Math.min(size / state.image.naturalWidth, size / state.image.naturalHeight);
-      const width = state.image.naturalWidth * scale;
-      const height = state.image.naturalHeight * scale;
+      const imageScale = Math.min(size / state.image.naturalWidth, size / state.image.naturalHeight);
+      const width = state.image.naturalWidth * imageScale;
+      const height = state.image.naturalHeight * imageScale;
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
       ctx.drawImage(state.image, (size - width) / 2, (size - height) / 2, width, height);
-      let pixels = ctx.getImageData(0, 0, size, size);
+      state.sourcePreview = workCanvas;
+      const pixels = ctx.getImageData(0, 0, size, size);
       let luminance = new Float32Array(size * size);
       for (let index = 0; index < luminance.length; index += 1) {
         const offset = index * 4;
@@ -801,20 +916,20 @@
       const invert = controls.invertPattern.checked;
       let data = new Uint8Array(size * size);
       for (let index = 0; index < data.length; index += 1) data[index] = (luminance[index] < threshold) !== invert ? 1 : 0;
+      const closeRadius = Math.ceil(numberValue(controls.closeStrength) / 3);
+      if (closeRadius > 0) data = closeMask(data, size, size, closeRadius);
       const smoothing = currentPatternSmoothing();
-      if (smoothing > 0) {
-        data = closeMask(data, size, size, Math.min(2, Math.ceil(smoothing / 4)));
-        data = smoothMask(data, size, size, smoothing);
-        data = removeSmallPatternComponents(data, size, size, Math.max(4, (smoothing + 1) * (smoothing + 1)));
-      }
-      state.islandsRemoved = currentMode() === "cut" ? removeSolidIslands(data, size) : 0;
-      state.mask = { data, size };
-      drawPatternPreview(data);
-      const adjustment = `比例 ${(currentPatternScale() * 100).toFixed(0)}% · 平滑 ${smoothing}`;
-      controls.patternStatus.textContent = state.islandsRemoved
-        ? `已自动移除 ${state.islandsRemoved} 个无法连接主体的孤岛 · ${adjustment}。`
-        : `${currentMode() === "cut" ? "橙色区域将被切穿" : "橙色区域将生成浮雕"} · ${adjustment}。`;
-      scheduleRebuild();
+      if (smoothing > 0) data = smoothMask(data, size, size, smoothing);
+      const pixelSize = patternPhysicalSize() / size;
+      const cleanupArea = Math.pow(Math.max(0, numberValue(controls.cleanup)) + 1, 2);
+      const minimumArea = Math.max(cleanupArea, numberValue(controls.minHoleArea) / Math.max(.0001, pixelSize * pixelSize));
+      if (minimumArea > 1) data = removeSmallPatternComponents(data, size, size, Math.ceil(minimumArea));
+      const expansionPixels = Math.round(Math.abs(numberValue(controls.hollowExpansion)) / Math.max(.001, pixelSize));
+      if (expansionPixels > 0) data = numberValue(controls.hollowExpansion) > 0
+        ? dilate(data, size, size, expansionPixels)
+        : erode(data, size, size, expansionPixels);
+      state.baseMask = data;
+      rebuildEditedMask(true);
     }
 
     function dilate(mask, width, height, radius) {
@@ -908,29 +1023,250 @@
       return output;
     }
 
-    function removeSolidIslands(mask, size) {
-      const connected = new Uint8Array(mask.length);
-      const queue = [];
-      const push = (index) => { if (!mask[index] && !connected[index]) { connected[index] = 1; queue.push(index); } };
-      for (let index = 0; index < size; index += 1) { push(index); push((size - 1) * size + index); push(index * size); push(index * size + size - 1); }
-      for (let cursor = 0; cursor < queue.length; cursor += 1) {
-        const index = queue[cursor], x = index % size, y = Math.floor(index / size);
-        if (x > 0) push(index - 1); if (x < size - 1) push(index + 1); if (y > 0) push(index - size); if (y < size - 1) push(index + size);
+    function detectSolidIslands(mask, size) {
+      const exterior = new Uint8Array(mask.length);
+      const queue = new Int32Array(mask.length);
+      let head = 0, tail = 0;
+      const pushExterior = (index) => {
+        if (index >= 0 && !mask[index] && !exterior[index]) { exterior[index] = 1; queue[tail++] = index; }
+      };
+      for (let index = 0; index < size; index += 1) {
+        pushExterior(index);
+        pushExterior((size - 1) * size + index);
+        pushExterior(index * size);
+        pushExterior(index * size + size - 1);
+      }
+      while (head < tail) {
+        const index = queue[head++], x = index % size, y = Math.floor(index / size);
+        if (x > 0) pushExterior(index - 1);
+        if (x < size - 1) pushExterior(index + 1);
+        if (y > 0) pushExterior(index - size);
+        if (y < size - 1) pushExterior(index + size);
       }
       const visited = new Uint8Array(mask.length);
-      let islands = 0;
+      const islands = [];
       for (let start = 0; start < mask.length; start += 1) {
-        if (mask[start] || connected[start] || visited[start]) continue;
-        islands += 1;
-        const islandQueue = [start]; visited[start] = 1;
-        for (let cursor = 0; cursor < islandQueue.length; cursor += 1) {
-          const index = islandQueue[cursor], x = index % size, y = Math.floor(index / size);
-          mask[index] = 1;
+        if (mask[start] || exterior[start] || visited[start]) continue;
+        const island = [];
+        head = 0;
+        tail = 0;
+        queue[tail++] = start;
+        visited[start] = 1;
+        while (head < tail) {
+          const index = queue[head++], x = index % size, y = Math.floor(index / size);
+          island.push(index);
           const neighbours = [x > 0 ? index - 1 : -1, x < size - 1 ? index + 1 : -1, y > 0 ? index - size : -1, y < size - 1 ? index + size : -1];
-          neighbours.forEach((next) => { if (next >= 0 && !mask[next] && !connected[next] && !visited[next]) { visited[next] = 1; islandQueue.push(next); } });
+          neighbours.forEach((next) => {
+            if (next >= 0 && !mask[next] && !exterior[next] && !visited[next]) { visited[next] = 1; queue[tail++] = next; }
+          });
+        }
+        islands.push(island);
+      }
+      return { exterior, islands };
+    }
+
+    function clonePatternEdits(edits) {
+      return edits.map((edit) => ({
+        ...edit,
+        points:edit.points?.map((point) => ({ x:point.x, y:point.y })),
+        runs:edit.runs?.map((run) => [...run])
+      }));
+    }
+
+    function recordPatternHistory() {
+      state.patternUndo.push(clonePatternEdits(state.patternEdits));
+      if (state.patternUndo.length > 30) state.patternUndo.shift();
+      state.patternRedo = [];
+    }
+
+    function drawMaskDisk(mask, size, x, y, radius, value) {
+      const left = Math.max(0, Math.floor(x - radius));
+      const right = Math.min(size - 1, Math.ceil(x + radius));
+      const top = Math.max(0, Math.floor(y - radius));
+      const bottom = Math.min(size - 1, Math.ceil(y + radius));
+      const radiusSquared = radius * radius;
+      for (let row = top; row <= bottom; row += 1) for (let column = left; column <= right; column += 1) {
+        if ((column - x) ** 2 + (row - y) ** 2 <= radiusSquared) mask[row * size + column] = value;
+      }
+    }
+
+    function applyPatternEdit(mask, size, edit) {
+      if (edit.kind === "deleteIsland") {
+        edit.runs.forEach(([rowRatio, startRatio, endRatio]) => {
+          const row = Math.max(0, Math.min(size - 1, Math.round(rowRatio * (size - 1))));
+          const start = Math.max(0, Math.min(size - 1, Math.round(startRatio * (size - 1))));
+          const end = Math.max(start, Math.min(size - 1, Math.round(endRatio * (size - 1))));
+          mask.fill(1, row * size + start, row * size + end + 1);
+        });
+        return;
+      }
+      if (!edit.points?.length) return;
+      const value = ["cut", "smoothCut"].includes(edit.kind) ? 1 : 0;
+      const radius = Math.max(.75, edit.sizeMm / Math.max(.001, patternPhysicalSize() / size) / 2);
+      const points = edit.points.map((point) => ({ x:point.x * (size - 1), y:point.y * (size - 1) }));
+      drawMaskDisk(mask, size, points[0].x, points[0].y, radius, value);
+      for (let index = 1; index < points.length; index += 1) {
+        const from = points[index - 1], to = points[index];
+        const steps = Math.max(1, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / Math.max(1, radius * .5)));
+        for (let step = 1; step <= steps; step += 1) {
+          const ratio = step / steps;
+          drawMaskDisk(mask, size, from.x + (to.x - from.x) * ratio, from.y + (to.y - from.y) * ratio, radius, value);
         }
       }
-      return islands;
+    }
+
+    function rebuildEditedMask(rebuildModel = false) {
+      if (!state.baseMask) return;
+      const size = controls.patternCanvas.width;
+      const data = state.baseMask.slice();
+      state.patternEdits.forEach((edit) => applyPatternEdit(data, size, edit));
+      if (state.patternDraft) applyPatternEdit(data, size, state.patternDraft);
+      const detected = currentMode() === "cut" ? detectSolidIslands(data, size) : { exterior:null, islands:[] };
+      state.exteriorSolid = detected.exterior;
+      state.solidIslands = detected.islands;
+      state.selectedIsland = state.solidIslands.length ? Math.min(state.selectedIsland, state.solidIslands.length - 1) : 0;
+      state.mask = { data, size };
+      drawPatternPreview(data);
+      updatePatternEditorControls();
+      const adjustment = `比例 ${(currentPatternScale() * 100).toFixed(0)}% · ${size}px · 平滑 ${currentPatternSmoothing()}`;
+      const islandText = state.solidIslands.length ? ` · ${state.solidIslands.length} 个孤岛待处理` : "";
+      controls.patternStatus.textContent = `${currentMode() === "cut" ? "橙色区域将被切穿" : "橙色区域将生成浮雕"}${islandText} · ${adjustment}。`;
+      if (rebuildModel) scheduleRebuild();
+    }
+
+    function updatePatternEditorControls() {
+      const editable = Boolean(state.image) && currentMode() === "cut" && state.patternView === "mask";
+      [controls.cutBrush, controls.smoothCutBrush, controls.solidBrush, controls.bridgeBrush].forEach((button) => { button.disabled = !editable; });
+      controls.brushSize.disabled = !editable;
+      controls.undoPattern.disabled = !state.patternUndo.length;
+      controls.redoPattern.disabled = !state.patternRedo.length;
+      controls.clearPatternEdits.disabled = !state.patternEdits.length;
+      controls.islandPanel.hidden = currentMode() !== "cut" || state.patternView !== "mask" || !state.solidIslands.length;
+      controls.islandCounter.textContent = state.solidIslands.length ? `${state.selectedIsland + 1} / ${state.solidIslands.length}` : "0 / 0";
+      controls.patternCanvasWrap.dataset.view = state.patternView;
+      controls.brushSizeLabel.textContent = ["cut", "smoothCut"].includes(state.patternTool) ? "镂空宽度" : state.patternTool === "bridge" ? "桥宽" : "补实体宽度";
+      $$('[data-pattern-view]').forEach((button) => button.classList.toggle("active", button.dataset.patternView === state.patternView));
+      $$('[data-pattern-tool]').forEach((button) => {
+        const active = button.dataset.patternTool === state.patternTool;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+    }
+
+    function patternPointFromEvent(event) {
+      if (!state.image || state.patternView !== "mask" || currentMode() !== "cut") return null;
+      const rect = controls.patternCanvas.getBoundingClientRect();
+      const scale = currentPatternScale();
+      const sourceX = ((event.clientX - rect.left) / rect.width - (1 - scale) / 2) / scale;
+      const sourceY = ((event.clientY - rect.top) / rect.height - (1 - scale) / 2) / scale;
+      if (sourceX < 0 || sourceX > 1 || sourceY < 0 || sourceY > 1) return null;
+      return { x:sourceX, y:sourceY };
+    }
+
+    function appendPatternPoint(edit, point) {
+      const previous = edit.points[edit.points.length - 1];
+      if (!previous || Math.hypot(point.x - previous.x, point.y - previous.y) > .0015) edit.points.push(point);
+    }
+
+    function smoothPatternPoints(points, iterations = 2) {
+      let result = points.map((point) => ({ ...point }));
+      for (let pass = 0; pass < iterations && result.length > 2; pass += 1) {
+        const next = [result[0]];
+        for (let index = 0; index < result.length - 1; index += 1) {
+          const a = result[index], b = result[index + 1];
+          next.push(
+            { x:a.x * .75 + b.x * .25, y:a.y * .75 + b.y * .25 },
+            { x:a.x * .25 + b.x * .75, y:a.y * .25 + b.y * .75 }
+          );
+        }
+        next.push(result[result.length - 1]);
+        result = next;
+      }
+      return result;
+    }
+
+    function selectPatternIsland(offset) {
+      if (!state.solidIslands.length) return;
+      state.selectedIsland = (state.selectedIsland + offset + state.solidIslands.length) % state.solidIslands.length;
+      drawPatternPreview(state.mask.data);
+      updatePatternEditorControls();
+    }
+
+    function deleteSelectedIsland() {
+      const island = state.solidIslands[state.selectedIsland];
+      if (!island) return;
+      const size = state.mask.size;
+      const rows = new Map();
+      island.forEach((index) => {
+        const row = Math.floor(index / size), column = index % size;
+        if (!rows.has(row)) rows.set(row, []);
+        rows.get(row).push(column);
+      });
+      const runs = [];
+      rows.forEach((columns, row) => {
+        columns.sort((a, b) => a - b);
+        let start = columns[0], end = columns[0];
+        for (let index = 1; index < columns.length; index += 1) {
+          const column = columns[index];
+          if (column === end + 1) { end = column; continue; }
+          runs.push([row / (size - 1), start / (size - 1), end / (size - 1)]);
+          start = end = column;
+        }
+        runs.push([row / (size - 1), start / (size - 1), end / (size - 1)]);
+      });
+      recordPatternHistory();
+      state.patternEdits.push({ kind:"deleteIsland", runs });
+      rebuildEditedMask(true);
+      showToast("已删除当前实体孤岛");
+    }
+
+    function autoBridgeSelectedIsland() {
+      const island = state.solidIslands[state.selectedIsland];
+      if (!island || !state.exteriorSolid) return;
+      const size = state.mask.size;
+      const data = state.mask.data;
+      const queue = new Int32Array(data.length);
+      const previous = new Int32Array(data.length);
+      previous.fill(-1);
+      let head = 0, tail = 0, found = -1;
+      island.forEach((index) => { queue[tail++] = index; previous[index] = -2; });
+      while (head < tail && found < 0) {
+        const index = queue[head++], x = index % size, y = Math.floor(index / size);
+        const neighbours = [x > 0 ? index - 1 : -1, x < size - 1 ? index + 1 : -1, y > 0 ? index - size : -1, y < size - 1 ? index + size : -1];
+        for (const next of neighbours) {
+          if (next < 0 || previous[next] !== -1) continue;
+          previous[next] = index;
+          if (state.exteriorSolid[next]) { found = next; break; }
+          if (data[next] === 1) queue[tail++] = next;
+        }
+      }
+      if (found < 0) return showToast("没有找到可连接到外圈实体的路径");
+      const path = [];
+      for (let cursor = found; cursor >= 0; cursor = previous[cursor]) {
+        path.push({ x:(cursor % size) / (size - 1), y:Math.floor(cursor / size) / (size - 1) });
+        if (previous[cursor] === -2) break;
+      }
+      path.reverse();
+      const stride = Math.max(1, Math.floor(path.length / 80));
+      const points = path.filter((_, index) => index === 0 || index === path.length - 1 || index % stride === 0);
+      recordPatternHistory();
+      state.patternEdits.push({ kind:"bridge", sizeMm:Math.max(1.2, numberValue(controls.brushSize)), points });
+      rebuildEditedMask(true);
+      showToast("已用最短路径连接当前孤岛");
+    }
+
+    function undoPatternEdit() {
+      if (!state.patternUndo.length) return;
+      state.patternRedo.push(clonePatternEdits(state.patternEdits));
+      state.patternEdits = state.patternUndo.pop();
+      rebuildEditedMask(true);
+    }
+
+    function redoPatternEdit() {
+      if (!state.patternRedo.length) return;
+      state.patternUndo.push(clonePatternEdits(state.patternEdits));
+      state.patternEdits = state.patternRedo.pop();
+      rebuildEditedMask(true);
     }
 
     function compileShader(gl, type, source) {
@@ -1070,8 +1406,8 @@
       const enabled = activeClipIndices(p).length;
       const strengthName = { easy:"容易拆装", balanced:"均衡", reinforced:"加强且可拆" }[p.strengthPreset];
       const fitName = { tight:"偏紧", standard:"标准", loose:"偏松" }[p.fitPreset];
-      const clipDimensions = `开口宽度 ${p.openingWidth} mm；径向宽度 ${p.contactLength} mm；根/末爪厚 ${p.legThickness}/${p.tipThickness} mm；边缘间隙 ${p.sideClearance} mm；单侧外勾 ${p.hookReach} mm；倒钩轴向高度 ${p.hookHeight} mm；导入坡度 ${p.insertionAngle.toFixed(1)}°；外侧防脱棱 ${p.ridgeEnabled ? `${p.ridgeHeight} mm` : "关闭"}；向内捏合片 ${p.releaseTabs ? "开启" : "关闭"}`;
-      const patternSettings = `比例 ${(p.patternScale * 100).toFixed(0)}%；轮廓平滑 ${p.patternSmoothing}；阈值 ${numberValue(controls.threshold)}；反色 ${controls.invertPattern.checked ? "开启" : "关闭"}`;
+      const clipDimensions = `开口宽度 ${p.openingWidth} mm；径向宽度 ${p.contactLength} mm；根/末爪厚 ${p.legThickness}/${p.tipThickness} mm；边缘间隙 ${p.sideClearance} mm；单侧外勾 ${p.hookReach} mm；倒钩轴向高度 ${p.hookHeight} mm；导入坡度 ${p.insertionAngle.toFixed(1)}°；向内捏合片 ${p.releaseTabs ? "开启" : "关闭"}`;
+      const patternSettings = `比例 ${(p.patternScale * 100).toFixed(0)}%；采样 ${p.samplingResolution}px；轮廓平滑 ${p.patternSmoothing}；杂点清理 ${p.cleanup}；镂空闭合 ${p.closeStrength}；最小镂空 ${p.minHoleArea} mm²；镂空扩张 ${p.hollowExpansion} mm；手工编辑 ${state.patternEdits.length} 项；阈值 ${numberValue(controls.threshold)}；反色 ${controls.invertPattern.checked ? "开启" : "关闭"}`;
       const geometryCheck = state.geometryVerification ? `${state.geometryVerification.status}; components=${state.geometryVerification.componentCount}; invalidEdges=${state.geometryVerification.invalidEdges}` : "Unavailable";
       const model = `<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="zh-CN" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Title">婴儿车装饰轮毂盖 ${p.coverDiameter}mm</metadata><metadata name="Application">婴儿车轮毂盖生成器</metadata><metadata name="Description">非承力装饰件；${enabled} 组同开口向外双爪；${p.mode === "cut" ? "贯穿镂空" : "浅浮雕"}</metadata><metadata name="StrengthPreset">${strengthName}</metadata><metadata name="FitPreset">${fitName}</metadata><metadata name="ClipSettings">${state.customClipSettings ? "自定义" : "跟随预设"}</metadata><metadata name="ClipDimensions">${clipDimensions}</metadata><metadata name="PatternSettings">${patternSettings}</metadata><metadata name="EstimatedStrain">${p.estimatedStrain.toFixed(2)}%</metadata><metadata name="GeometryKernel">Manifold 3.5.1</metadata><metadata name="GeometryCheck">${geometryCheck}</metadata><resources><object id="1" type="model" name="${escapeXml(`轮毂盖-${enabled}组向外双爪`)}"><mesh><vertices>${vertexXml}</vertices><triangles>${faceXml}</triangles></mesh></object></resources><build><item objectid="1"/></build></model>`;
       const types = `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>`;
@@ -1088,17 +1424,22 @@
     function trialFilename() { const p = params(); return `单组试装向外双爪-开口${p.openingWidth}mm-深度${p.spokeBackDepth}mm-外勾${p.hookReach}mm.stl`; }
     function showToast(message) { controls.toast.textContent = message; controls.toast.classList.add("show"); clearTimeout(showToast.timer); showToast.timer = setTimeout(() => controls.toast.classList.remove("show"), 2400); }
 
+    const imageProcessingPairs = ["coverDiameter", "patternScale", "threshold", "samplingResolution", "cleanup", "closeStrength", "minHoleArea", "hollowExpansion", "smoothing"];
     $$('input[type="range"][data-pair]').forEach((range) => {
       const number = $(`#${range.dataset.pair}`);
       range.addEventListener("input", () => {
         number.value = range.value;
         if (range.dataset.pair === "clipCount") resetClipGroups(range.value);
-        if (["patternScale", "threshold", "smoothing"].includes(range.dataset.pair)) processImage(); else scheduleRebuild();
+        if (range.dataset.pair === "brushSize") updatePatternEditorControls();
+        else if (imageProcessingPairs.includes(range.dataset.pair)) processImage();
+        else scheduleRebuild();
       });
       number.addEventListener("input", () => {
         range.value = number.value;
         if (range.dataset.pair === "clipCount") resetClipGroups(number.value);
-        if (["patternScale", "threshold", "smoothing"].includes(range.dataset.pair)) processImage(); else scheduleRebuild();
+        if (range.dataset.pair === "brushSize") updatePatternEditorControls();
+        else if (imageProcessingPairs.includes(range.dataset.pair)) processImage();
+        else scheduleRebuild();
       });
     });
     controls.clipGroupPicker.addEventListener("click", (event) => {
@@ -1110,7 +1451,7 @@
       state.activeClipGroups[index] = !state.activeClipGroups[index];
       void rebuildMesh();
     });
-    $$('input[name="patternMode"]').forEach((input) => input.addEventListener("change", () => { controls.reliefControl.hidden = currentMode() !== "relief"; processImage(); }));
+    $$('input[name="patternMode"]').forEach((input) => input.addEventListener("change", () => { controls.reliefControl.hidden = currentMode() !== "relief"; processImage(); updatePatternEditorControls(); }));
     $$('input[name="strengthPreset"], input[name="fitPreset"]').forEach((input) => input.addEventListener("change", () => {
       state.customClipSettings = false;
       controls.clipDetailStatus.textContent = "跟随预设";
@@ -1121,20 +1462,85 @@
       controls.clipDetailStatus.textContent = "自定义";
       scheduleRebuild();
     }));
-    controls.ridgeEnabled.addEventListener("change", () => {
-      controls.ridgeHeight.disabled = !controls.ridgeEnabled.checked;
-      scheduleRebuild();
-    });
-    controls.ridgeHeight.addEventListener("input", scheduleRebuild);
     controls.releaseTabs.addEventListener("change", scheduleRebuild);
     controls.invertPattern.addEventListener("change", processImage);
     controls.imageInput.addEventListener("change", () => {
       const file = controls.imageInput.files?.[0]; if (!file) return;
-      const image = new Image(); image.onload = () => { state.image = image; controls.uploadName.textContent = file.name; processImage(); URL.revokeObjectURL(image.src); }; image.src = URL.createObjectURL(file);
+      const image = new Image(); image.onload = () => {
+        state.image = image;
+        state.patternEdits = [];
+        state.patternUndo = [];
+        state.patternRedo = [];
+        state.selectedIsland = 0;
+        controls.uploadName.textContent = file.name;
+        processImage();
+        URL.revokeObjectURL(image.src);
+      };
+      image.src = URL.createObjectURL(file);
     });
     ["dragenter","dragover"].forEach((type) => controls.uploadZone.addEventListener(type, (event) => { event.preventDefault(); controls.uploadZone.classList.add("dragging"); }));
     ["dragleave","drop"].forEach((type) => controls.uploadZone.addEventListener(type, (event) => { event.preventDefault(); controls.uploadZone.classList.remove("dragging"); }));
     controls.uploadZone.addEventListener("drop", (event) => { const file = event.dataTransfer.files?.[0]; if (!file?.type.match(/^image\/(png|jpeg|webp)$/)) return showToast("请选择 PNG、JPEG 或 WebP 图片"); const transfer = new DataTransfer(); transfer.items.add(file); controls.imageInput.files = transfer.files; controls.imageInput.dispatchEvent(new Event("change")); });
+    $$('[data-pattern-view]').forEach((button) => button.addEventListener("click", () => {
+      state.patternView = button.dataset.patternView;
+      drawPatternPreview(state.mask?.data || null);
+      updatePatternEditorControls();
+    }));
+    $$('[data-pattern-tool]').forEach((button) => button.addEventListener("click", () => {
+      state.patternTool = button.dataset.patternTool;
+      if (state.patternTool === "bridge" && numberValue(controls.brushSize) < 1.2) {
+        controls.brushSize.value = "1.2";
+        $('[data-pair="brushSize"]').value = "1.2";
+      }
+      updatePatternEditorControls();
+    }));
+    controls.undoPattern.addEventListener("click", undoPatternEdit);
+    controls.redoPattern.addEventListener("click", redoPatternEdit);
+    controls.clearPatternEdits.addEventListener("click", () => {
+      if (!state.patternEdits.length) return;
+      recordPatternHistory();
+      state.patternEdits = [];
+      rebuildEditedMask(true);
+    });
+    controls.expandPatternEditor.addEventListener("click", () => {
+      const expanded = controls.patternEditor.classList.toggle("expanded");
+      document.body.classList.toggle("pattern-editing", expanded);
+      controls.expandPatternEditor.textContent = expanded ? "退出放大" : "放大编辑";
+    });
+    controls.previousIsland.addEventListener("click", () => selectPatternIsland(-1));
+    controls.nextIsland.addEventListener("click", () => selectPatternIsland(1));
+    controls.autoBridgeIsland.addEventListener("click", autoBridgeSelectedIsland);
+    controls.deleteIsland.addEventListener("click", deleteSelectedIsland);
+    controls.patternCanvas.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      const point = patternPointFromEvent(event);
+      if (!point) return;
+      event.preventDefault();
+      const sizeMm = state.patternTool === "bridge" ? Math.max(1.2, numberValue(controls.brushSize)) : numberValue(controls.brushSize);
+      state.patternDraft = { kind:state.patternTool, sizeMm, points:[point] };
+      controls.patternCanvas.setPointerCapture?.(event.pointerId);
+      rebuildEditedMask(false);
+    });
+    controls.patternCanvas.addEventListener("pointermove", (event) => {
+      if (!state.patternDraft) return;
+      const point = patternPointFromEvent(event);
+      if (!point) return;
+      appendPatternPoint(state.patternDraft, point);
+      rebuildEditedMask(false);
+    });
+    const finishPatternStroke = (event) => {
+      if (!state.patternDraft) return;
+      const point = patternPointFromEvent(event);
+      if (point) appendPatternPoint(state.patternDraft, point);
+      if (state.patternDraft.kind === "smoothCut") state.patternDraft.points = smoothPatternPoints(state.patternDraft.points);
+      recordPatternHistory();
+      state.patternEdits.push(state.patternDraft);
+      state.patternDraft = null;
+      controls.patternCanvas.releasePointerCapture?.(event.pointerId);
+      rebuildEditedMask(true);
+    };
+    controls.patternCanvas.addEventListener("pointerup", finishPatternStroke);
+    controls.patternCanvas.addEventListener("pointercancel", () => { state.patternDraft = null; rebuildEditedMask(false); });
     $$(".view-button").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
     controls.resetView.addEventListener("click", () => setView("perspective"));
     controls.previewCanvas.addEventListener("pointerdown", (event) => { state.dragging = true; state.pointer = { x:event.clientX, y:event.clientY }; controls.previewCanvas.setPointerCapture(event.pointerId); });
@@ -1157,6 +1563,17 @@
         controls.downloadTrialStl.disabled = !validateTrialClip(params()).valid;
       }
     });
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && controls.patternEditor.classList.contains("expanded")) {
+        controls.patternEditor.classList.remove("expanded");
+        document.body.classList.remove("pattern-editing");
+        controls.expandPatternEditor.textContent = "放大编辑";
+        return;
+      }
+      if (!(event.ctrlKey || event.metaKey) || String(event.key).toLowerCase() !== "z" || event.target?.matches?.("input, select, textarea")) return;
+      event.preventDefault();
+      if (event.shiftKey) redoPatternEdit(); else undoPatternEdit();
+    });
     window.addEventListener("resize", requestRender);
 
     async function initializeApp() {
@@ -1171,7 +1588,6 @@
       }
     }
 
-    controls.ridgeHeight.disabled = !controls.ridgeEnabled.checked;
     void initializeApp();
   </script>
 </body>
