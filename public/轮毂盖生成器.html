@@ -178,7 +178,7 @@
     .upload-zone strong { margin-bottom: 3px; font-size: 12px; }
     .upload-zone small { color: var(--ink-soft); font-size: 10px; }
     .pattern-row { display: grid; grid-template-columns: 96px 1fr; gap: 12px; }
-    #patternCanvas { width: 96px; height: 96px; border: 1px solid var(--line); background: white; image-rendering: pixelated; }
+    #patternCanvas { width: 96px; height: 96px; border: 1px solid var(--line); background: white; image-rendering: auto; }
     .mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; border: 1px solid var(--line); background: var(--line); }
     .mode-switch label { position: relative; cursor: pointer; }
     .mode-switch input { position: absolute; opacity: 0; }
@@ -354,27 +354,29 @@
       </section>
 
       <section class="section">
-        <div class="section-heading"><strong>轮辐与双爪</strong><span>02 / FIT</span></div>
+        <div class="section-heading"><strong>轮辐开口与双爪</strong><span>02 / FIT</span></div>
         <div class="section-body">
-          <div class="diagram" aria-label="轮辐深度与双爪测量示意">
+          <div class="diagram" aria-label="双爪穿过同一轮辐开口并向外卡边的测量示意">
             <svg viewBox="0 0 320 112" role="img">
               <path class="part" d="M34 14h252v13H34z"/>
-              <path class="spoke" d="M122 49h116v30H122z"/>
-              <path class="part" d="M103 27h13v59h-13z"/>
-              <path class="hook" d="M103 79h31v8h-31z"/>
-              <path class="measure" d="M78 27v60m-5-60h10m-10 60h10"/>
-              <path class="measure" d="M250 49v30m-5-30h10m-10 30h10"/>
-              <text x="12" y="58">总深度</text>
-              <text x="257" y="67">轮辐</text>
-              <text x="126" y="101">末端从背面回勾</text>
-              <text x="151" y="44">盖板背面</text>
+              <path class="spoke" d="M54 47h60v38H54zM206 47h60v38h-60z"/>
+              <path class="part" d="M127 27h12v64h-12zM181 27h12v64h-12z"/>
+              <path class="hook" d="M103 80h36v11h-46zM181 80h36l10 11h-46z"/>
+              <path class="measure" d="M32 27v64m-5-64h10m-10 64h10"/>
+              <path class="measure" d="M114 101h92m-92-5v10m92-10v10"/>
+              <text x="4" y="64">总深度</text>
+              <text x="160" y="108" text-anchor="middle">开口宽度</text>
+              <text x="160" y="42" text-anchor="middle">两爪从同一开口穿入</text>
+              <text x="160" y="76" text-anchor="middle">中间为空</text>
+              <text x="160" y="17" text-anchor="middle">盖板背面</text>
             </svg>
           </div>
           <div class="control"><label for="clipRadius">中心到卡扣距离</label><input id="clipRadius" type="number" min="20" max="150" step="0.5" value="70"><input data-pair="clipRadius" type="range" min="20" max="150" step="0.5" value="70"></div>
           <div class="control"><label for="clipCount">候选卡扣组数</label><input id="clipCount" type="number" min="3" max="12" step="1" value="5"><input data-pair="clipCount" type="range" min="3" max="12" step="1" value="5"></div>
           <div class="control"><label for="startAngle">卡扣起始角度</label><input id="startAngle" type="number" min="-180" max="180" step="1" value="0"><input data-pair="startAngle" type="range" min="-180" max="180" step="1" value="0"></div>
-          <div class="control"><label for="spokeWidth">轮辐宽度</label><input id="spokeWidth" type="number" min="4" max="36" step="0.5" value="12"><input data-pair="spokeWidth" type="range" min="4" max="36" step="0.5" value="12"><p class="control-note">在卡扣安装半径处，沿圆周方向测量单根轮辐宽度。</p></div>
+          <div class="control"><label for="openingWidth">轮辐开口宽度</label><input id="openingWidth" type="number" min="8" max="80" step="0.5" value="24"><input data-pair="openingWidth" type="range" min="8" max="80" step="0.5" value="24"><p class="control-note">在卡扣安装半径处，测量相邻两根轮辐之间可贯穿的净宽；一组双爪会从这个开口共同穿入。</p></div>
           <div class="control"><label for="spokeBackDepth">卡扣总深度</label><input id="spokeBackDepth" type="number" min="8" max="50" step="0.5" value="20"><input data-pair="spokeBackDepth" type="range" min="8" max="50" step="0.5" value="20"><p class="control-note">从轮毂盖背面量到轮辐最背面；已包含中心轴帽高差和轮辐前部的全部空隙。</p></div>
+          <p class="control-note">适用前提：开口背面的左右边缘都必须有连续、可承力的挂边，并且不能被加强筋或轴帽挡住。</p>
           <div>
             <p class="clip-group-note" style="margin-bottom:7px">结构强度</p>
             <div class="mode-switch preset-switch" role="radiogroup" aria-label="结构强度预设">
@@ -393,7 +395,7 @@
           </div>
           <div class="position-readout">
             <div><span>启用卡扣组</span><strong id="activeClipCount">—</strong></div>
-            <div><span>双爪内部间距</span><strong id="jawOpening">—</strong></div>
+            <div><span>爪外侧间距</span><strong id="jawOpening">—</strong></div>
             <div><span>预计卡爪应变</span><strong id="clipStrain">—</strong></div>
             <div class="wide"><span>当前结构尺寸</span><strong id="autoDimensions">—</strong></div>
           </div>
@@ -405,17 +407,18 @@
       <details class="section">
         <summary>卡爪微调 <span id="clipDetailStatus" style="float:none;margin-left:8px;color:var(--teal);font:9px var(--mono)">跟随预设</span></summary>
         <div class="section-body">
-          <p class="control-note">预设会自动填入安全起点。修改任一尺寸后进入自定义状态；切换预设可重新载入推荐值。倒钩的径向宽度与爪片径向宽度相同。</p>
+          <p class="control-note">预设会自动填入安全起点。两爪位于同一个开口内，倒钩末端相互背离并向外挂住左右背面边缘；修改任一尺寸后进入自定义状态。</p>
           <div class="control"><label for="contactLength">爪片径向宽度</label><input id="contactLength" data-clip-custom type="number" min="8" max="30" step="0.5" value="14"></div>
           <div class="control"><label for="legThickness">爪片厚度</label><input id="legThickness" data-clip-custom type="number" min="1.2" max="3.5" step="0.1" value="2"></div>
           <div class="control"><label for="sideClearance">单侧装配间隙</label><input id="sideClearance" data-clip-custom type="number" min="0.1" max="1" step="0.05" value="0.35"></div>
-          <div class="control"><label for="engagement">倒钩深度</label><input id="engagement" data-clip-custom type="number" min="0.3" max="2" step="0.05" value="0.8"><p class="control-note">倒钩向轮辐内侧伸出的距离，直接影响拉脱力和拆卸难度。</p></div>
-          <div class="control"><label for="hookHeight">倒钩高度</label><input id="hookHeight" data-clip-custom type="number" min="0.8" max="4" step="0.1" value="1.4"></div>
-          <div class="control"><label for="chamfer">导入斜面高度</label><input id="chamfer" data-clip-custom type="number" min="0.3" max="4" step="0.1" value="0.8"></div>
+          <div class="control"><label for="hookReach">单侧倒钩外伸量</label><input id="hookReach" data-clip-custom type="number" min="0.3" max="2.5" step="0.05" value="0.8"><p class="control-note">卡爪弹开后，每侧倒钩越过开口边缘的覆盖距离；数值越大，拉脱力和拆卸难度越高。</p></div>
+          <div class="control"><label for="hookHeight">倒钩轴向高度</label><input id="hookHeight" data-clip-custom type="number" min="0.8" max="4" step="0.1" value="1.4"><p class="control-note">从轮辐背面承力面到倒钩最深端的高度。</p></div>
+          <div class="control"><label for="insertionRampHeight">导入斜面高度</label><input id="insertionRampHeight" data-clip-custom type="number" min="0.3" max="4" step="0.1" value="1.15"><p class="control-note">必须覆盖装配间隙与外伸量，保证插入坡度不陡于约 45°。</p></div>
           <div class="control"><label for="rootHeight">根部加强高度</label><input id="rootHeight" data-clip-custom type="number" min="2" max="10" step="0.5" value="5"></div>
           <label class="inline-check"><span>圆钝防脱棱</span><input id="ridgeEnabled" type="checkbox" checked></label>
-          <div class="control" id="ridgeHeightControl"><label for="ridgeHeight">防脱棱高度</label><input id="ridgeHeight" type="number" min="0.4" max="0.8" step="0.1" value="0.4"><p class="control-note">平面倒钩内侧的圆钝小棱，增加振动退出的阻力；不建议做成尖角。</p></div>
-          <label class="inline-check"><span>生成末端拆卸拨片</span><input id="releaseTabs" type="checkbox" checked></label>
+          <div class="control" id="ridgeHeightControl"><label for="ridgeHeight">防脱棱高度</label><input id="ridgeHeight" type="number" min="0.4" max="0.8" step="0.1" value="0.4"><p class="control-note">圆钝小棱位于向外倒钩的背面承力区，形成预紧并阻碍振动退出；不会伸向中间空腔。</p></div>
+          <label class="inline-check"><span>生成向内捏合拆卸片</span><input id="releaseTabs" type="checkbox" checked></label>
+          <p class="control-note">拆卸时从轮后同时将两片向开口中心捏合，再把轮毂盖向前推出；不要从盖板单边硬撬。</p>
         </div>
       </details>
 
@@ -428,7 +431,7 @@
             <span><strong>上传黑白图案</strong><small id="uploadName">可选；图片始终只在本机处理</small></span>
           </label>
           <div class="pattern-row">
-            <canvas id="patternCanvas" width="192" height="192" aria-label="处理后的图案"></canvas>
+            <canvas id="patternCanvas" width="384" height="384" aria-label="处理后的图案"></canvas>
             <div>
               <div class="mode-switch" role="radiogroup" aria-label="图案建模方式">
                 <label><input type="radio" name="patternMode" value="cut" checked><span>贯穿镂空</span></label>
@@ -437,11 +440,12 @@
               <p class="control-note" id="patternStatus" style="margin-top:10px">未上传图案，将使用默认放射镂空。</p>
             </div>
           </div>
+          <div class="control"><label for="patternScale">图案比例</label><input id="patternScale" type="number" min="30" max="100" step="1" value="100"><input data-pair="patternScale" type="range" min="30" max="100" step="1" value="100"><p class="control-note">相对于外圈以内可用图案区域的占比；缩小后保持居中，不影响外圈和卡爪根部保护区。</p></div>
           <details class="section" style="margin:0">
             <summary>图案微调</summary>
             <div class="section-body">
               <div class="control"><label for="threshold">黑白阈值</label><input id="threshold" type="number" min="20" max="235" step="1" value="128"><input data-pair="threshold" type="range" min="20" max="235" step="1" value="128"></div>
-              <div class="control"><label for="smoothing">图案平滑</label><input id="smoothing" type="number" min="0" max="3" step="1" value="1"><input data-pair="smoothing" type="range" min="0" max="3" step="1" value="1"></div>
+              <div class="control"><label for="smoothing">轮廓平滑</label><input id="smoothing" type="number" min="0" max="8" step="1" value="3"><input data-pair="smoothing" type="range" min="0" max="8" step="1" value="3"><p class="control-note">去除锯齿、小缺口和扫描噪点；数值越大越圆滑，也越可能损失尖细细节。</p></div>
               <label class="inline-check"><span>反转黑白区域</span><input id="invertPattern" type="checkbox"></label>
               <div class="control" id="reliefControl" hidden><label for="reliefHeight">浮雕高度</label><input id="reliefHeight" type="number" min="0.3" max="3" step="0.1" value="0.8"><input data-pair="reliefHeight" type="range" min="0.3" max="3" step="0.1" value="0.8"></div>
             </div>
@@ -454,9 +458,9 @@
         <div class="export-row">
           <button class="export-button" id="downloadStl" type="button">下载 STL</button>
           <button class="export-button secondary" id="download3mf" type="button">下载 3MF</button>
-          <button class="export-button trial" id="downloadTrialStl" type="button">下载单组试装爪 STL · 含圆底座</button>
+          <button class="export-button trial" id="downloadTrialStl" type="button">下载单组向外双爪 STL · 含圆底座</button>
         </div>
-        <p class="export-note" id="qualityDetail">导出前请先打印小样验证轮辐尺寸、拉脱力与车轮干涉。</p>
+        <p class="export-note" id="qualityDetail">导出前请先打印小样验证开口宽度、背面挂边、拉脱力与车轮干涉。</p>
       </div>
     </aside>
 
@@ -474,7 +478,7 @@
         <canvas id="previewCanvas" aria-label="可旋转的轮毂盖三维预览"></canvas>
         <span class="canvas-title">Hubcap assembly study</span>
         <span class="edge-measure" id="edgeMeasure">外圈保留 8.0 mm</span>
-        <span class="canvas-hint">橙色：轮毂盖与双爪 / 青色：参考轮辐（不导出）</span>
+        <span class="canvas-hint">橙色：轮毂盖与向外双爪 / 青色：参考开口左右边缘（不导出）</span>
       </div>
       <div class="metrics">
         <div class="metric"><span>成品外径</span><strong id="metricDiameter">200.0 mm</strong></div>
@@ -504,12 +508,12 @@
     const $$ = (selector) => [...document.querySelectorAll(selector)];
     const controls = {
       coverDiameter: $("#coverDiameter"),
-      clipRadius: $("#clipRadius"), clipCount: $("#clipCount"), startAngle: $("#startAngle"), spokeWidth: $("#spokeWidth"),
+      clipRadius: $("#clipRadius"), clipCount: $("#clipCount"), startAngle: $("#startAngle"), openingWidth: $("#openingWidth"),
       spokeBackDepth: $("#spokeBackDepth"),
       contactLength: $("#contactLength"), legThickness: $("#legThickness"), sideClearance: $("#sideClearance"),
-      engagement: $("#engagement"), hookHeight: $("#hookHeight"), chamfer: $("#chamfer"), rootHeight: $("#rootHeight"), clipDetailStatus: $("#clipDetailStatus"),
+      hookReach: $("#hookReach"), hookHeight: $("#hookHeight"), insertionRampHeight: $("#insertionRampHeight"), rootHeight: $("#rootHeight"), clipDetailStatus: $("#clipDetailStatus"),
       ridgeEnabled: $("#ridgeEnabled"), ridgeHeight: $("#ridgeHeight"), releaseTabs: $("#releaseTabs"),
-      threshold: $("#threshold"), smoothing: $("#smoothing"), invertPattern: $("#invertPattern"), reliefHeight: $("#reliefHeight"),
+      patternScale: $("#patternScale"), threshold: $("#threshold"), smoothing: $("#smoothing"), invertPattern: $("#invertPattern"), reliefHeight: $("#reliefHeight"),
       imageInput: $("#imageInput"), uploadZone: $("#uploadZone"), uploadName: $("#uploadName"), patternCanvas: $("#patternCanvas"),
       patternStatus: $("#patternStatus"), reliefControl: $("#reliefControl"), previewCanvas: $("#previewCanvas"),
       activeClipCount: $("#activeClipCount"), jawOpening: $("#jawOpening"), clipStrain: $("#clipStrain"), autoDimensions: $("#autoDimensions"),
@@ -550,15 +554,17 @@
     function numberValue(control) { return Number(control.value); }
     function currentMode() { return $("input[name='patternMode']:checked").value; }
     function selectedPreset(name) { return $(`input[name='${name}']:checked`).value; }
+    function currentPatternScale() { return Math.max(.3, Math.min(1, numberValue(controls.patternScale) / 100)); }
+    function currentPatternSmoothing() { return Math.max(0, Math.min(8, Math.round(numberValue(controls.smoothing)))); }
 
     function params() {
       const custom = state.customClipSettings ? {
         contactLength:numberValue(controls.contactLength),
         legThickness:numberValue(controls.legThickness),
         sideClearance:numberValue(controls.sideClearance),
-        engagement:numberValue(controls.engagement),
+        hookReach:numberValue(controls.hookReach),
         hookHeight:numberValue(controls.hookHeight),
-        chamfer:numberValue(controls.chamfer),
+        insertionRampHeight:numberValue(controls.insertionRampHeight),
         rootHeight:numberValue(controls.rootHeight)
       } : null;
       return deriveStructure({
@@ -566,10 +572,12 @@
         clipRadius:numberValue(controls.clipRadius),
         clipCount:Math.round(numberValue(controls.clipCount)),
         startAngle:numberValue(controls.startAngle) * Math.PI / 180,
-        spokeWidth:numberValue(controls.spokeWidth),
+        openingWidth:numberValue(controls.openingWidth),
         spokeBackDepth:numberValue(controls.spokeBackDepth),
         strengthPreset:selectedPreset("strengthPreset"),
         fitPreset:selectedPreset("fitPreset"),
+        patternScale:currentPatternScale(),
+        patternSmoothing:currentPatternSmoothing(),
         reliefHeight:numberValue(controls.reliefHeight),
         mode:currentMode(),
         ridgeEnabled:controls.ridgeEnabled.checked,
@@ -580,7 +588,7 @@
 
     function syncCustomControls(p) {
       if (state.customClipSettings) return;
-      ["contactLength", "legThickness", "sideClearance", "engagement", "hookHeight", "chamfer", "rootHeight"].forEach((name) => {
+      ["contactLength", "legThickness", "sideClearance", "hookReach", "hookHeight", "insertionRampHeight", "rootHeight"].forEach((name) => {
         controls[name].value = Number(p[name].toFixed(2));
       });
       controls.clipDetailStatus.textContent = "跟随预设";
@@ -664,9 +672,9 @@
       const m = clipMetrics(p, activeClipIndices(p));
       syncCustomControls(p);
       controls.activeClipCount.textContent = `${m.enabled} / ${p.clipCount} 组`;
-      controls.jawOpening.textContent = `${m.jawOpening.toFixed(2)} mm`;
+      controls.jawOpening.textContent = `${m.jawOuterSpan.toFixed(2)} mm`;
       controls.clipStrain.textContent = `${p.estimatedStrain.toFixed(2)}%`;
-      controls.autoDimensions.textContent = `板 ${p.coverThickness.toFixed(1)} · 圈 ${p.outerRingWidth.toFixed(1)} · 爪根/末 ${p.legThickness.toFixed(1)}/${p.tipThickness.toFixed(1)} · 加强 ${p.rootHeight.toFixed(1)} mm`;
+      controls.autoDimensions.textContent = `板 ${p.coverThickness.toFixed(1)} · 圈 ${p.outerRingWidth.toFixed(1)} · 爪根/末 ${p.legThickness.toFixed(1)}/${p.tipThickness.toFixed(1)} · 外勾 ${p.hookReach.toFixed(2)} · 坡度 ${p.insertionAngle.toFixed(0)}°`;
       controls.edgeMeasure.textContent = `外圈保留 ${p.outerRingWidth.toFixed(1)} mm`;
       controls.metricDiameter.textContent = `${p.coverDiameter.toFixed(1)} mm`;
       controls.metricHeight.textContent = `${(p.spokeBackDepth + p.hookHeight + p.coverThickness + (p.mode === "relief" ? p.reliefHeight : 0)).toFixed(1)} mm`;
@@ -680,7 +688,7 @@
       controls.downloadStl.disabled = !exportReady;
       controls.download3mf.disabled = !exportReady;
       controls.downloadTrialStl.disabled = !state.geometryReady || !validateTrialClip(p).valid;
-      controls.downloadTrialStl.textContent = `下载单组试装爪 STL · 圆底座 Ø${(trialBaseRadius(p) * 2).toFixed(1)} mm`;
+      controls.downloadTrialStl.textContent = `下载单组向外双爪 STL · 圆底座 Ø${(trialBaseRadius(p) * 2).toFixed(1)} mm`;
       controls.qualityStatus.classList.toggle("error", !validation.valid || Boolean(state.geometryError));
       if (state.geometryBuilding) controls.qualityStatus.textContent = "正在生成封闭实体";
       else if (!validation.valid) controls.qualityStatus.textContent = `${validation.errors.length} 项需修正`;
@@ -688,7 +696,7 @@
       const verificationText = state.geometryVerification
         ? `Manifold ${state.geometryVerification.status} · 1 个组件 · 0 条非流形边 · 最小壁厚 ${p.minWall.toFixed(1)} mm`
         : "";
-      controls.qualityDetail.textContent = validation.errors[0] || validation.warnings[0] || verificationText || "导出前请先打印小样验证轮辐尺寸、拉脱力与车轮干涉。";
+      controls.qualityDetail.textContent = validation.errors[0] || validation.warnings[0] || verificationText || "导出前请先打印小样验证开口宽度、背面挂边、拉脱力与车轮干涉。";
     }
 
     function renderClipGroupPicker(p) {
@@ -707,33 +715,66 @@
       state.rebuildTimer = setTimeout(() => { void rebuildMesh(); }, 120);
     }
 
-    function processImage() {
+    function drawPatternPreview(mask) {
       const canvas = controls.patternCanvas;
       const ctx = canvas.getContext("2d", { willReadFrequently: true });
       const size = canvas.width;
       ctx.clearRect(0, 0, size, size);
       ctx.fillStyle = "white";
       ctx.fillRect(0, 0, size, size);
-      if (!state.image) {
+      const scale = currentPatternScale();
+      if (!mask) {
         ctx.strokeStyle = "#ec6a3a";
-        ctx.lineWidth = size * .115;
+        ctx.lineWidth = size * .115 * scale;
         ctx.lineCap = "round";
         for (let index = 0; index < 10; index += 1) {
           const angle = Math.PI * 2 * (index + .5) / 10;
           ctx.beginPath();
-          ctx.moveTo(size / 2 + Math.cos(angle) * size * .188, size / 2 + Math.sin(angle) * size * .188);
-          ctx.lineTo(size / 2 + Math.cos(angle) * size * .365, size / 2 + Math.sin(angle) * size * .365);
+          ctx.moveTo(size / 2 + Math.cos(angle) * size * .188 * scale, size / 2 + Math.sin(angle) * size * .188 * scale);
+          ctx.lineTo(size / 2 + Math.cos(angle) * size * .365 * scale, size / 2 + Math.sin(angle) * size * .365 * scale);
           ctx.stroke();
         }
-        ctx.strokeStyle = "#d5cec1";
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.arc(size / 2, size / 2, size * .438, 0, Math.PI * 2); ctx.stroke();
+      } else {
+        const source = document.createElement("canvas");
+        source.width = size;
+        source.height = size;
+        const sourceCtx = source.getContext("2d");
+        const preview = sourceCtx.createImageData(size, size);
+        for (let index = 0; index < mask.length; index += 1) {
+          const value = mask[index] ? 30 : 247;
+          preview.data[index * 4] = mask[index] ? 236 : value;
+          preview.data[index * 4 + 1] = mask[index] ? 106 : value;
+          preview.data[index * 4 + 2] = mask[index] ? 58 : value;
+          preview.data[index * 4 + 3] = 255;
+        }
+        sourceCtx.putImageData(preview, 0, 0);
+        const targetSize = size * scale;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(source, (size - targetSize) / 2, (size - targetSize) / 2, targetSize, targetSize);
+      }
+      ctx.strokeStyle = "#d5cec1";
+      ctx.lineWidth = Math.max(1, size / 192);
+      ctx.beginPath(); ctx.arc(size / 2, size / 2, size * .438, 0, Math.PI * 2); ctx.stroke();
+    }
+
+    function processImage() {
+      const canvas = controls.patternCanvas;
+      const size = canvas.width;
+      if (!state.image) {
+        drawPatternPreview(null);
         state.mask = null;
         state.islandsRemoved = 0;
-        controls.patternStatus.textContent = currentMode() === "cut" ? "正在使用默认放射镂空。" : "默认放射区域将生成浮雕。";
+        controls.patternStatus.textContent = `${currentMode() === "cut" ? "正在使用默认放射镂空" : "默认放射区域将生成浮雕"} · 比例 ${(currentPatternScale() * 100).toFixed(0)}%。`;
         scheduleRebuild();
         return;
       }
+      const workCanvas = document.createElement("canvas");
+      workCanvas.width = size;
+      workCanvas.height = size;
+      const ctx = workCanvas.getContext("2d", { willReadFrequently: true });
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, size, size);
       const scale = Math.min(size / state.image.naturalWidth, size / state.image.naturalHeight);
       const width = state.image.naturalWidth * scale;
       const height = state.image.naturalHeight * scale;
@@ -746,7 +787,8 @@
         const offset = index * 4;
         luminance[index] = pixels.data[offset] * .2126 + pixels.data[offset + 1] * .7152 + pixels.data[offset + 2] * .0722;
       }
-      for (let pass = 0; pass < numberValue(controls.smoothing); pass += 1) {
+      const luminancePasses = Math.min(2, Math.floor((currentPatternSmoothing() + 2) / 3));
+      for (let pass = 0; pass < luminancePasses; pass += 1) {
         const next = luminance.slice();
         for (let y = 1; y < size - 1; y += 1) for (let x = 1; x < size - 1; x += 1) {
           let sum = 0;
@@ -757,23 +799,113 @@
       }
       const threshold = numberValue(controls.threshold);
       const invert = controls.invertPattern.checked;
-      const data = new Uint8Array(size * size);
+      let data = new Uint8Array(size * size);
       for (let index = 0; index < data.length; index += 1) data[index] = (luminance[index] < threshold) !== invert ? 1 : 0;
+      const smoothing = currentPatternSmoothing();
+      if (smoothing > 0) {
+        data = closeMask(data, size, size, Math.min(2, Math.ceil(smoothing / 4)));
+        data = smoothMask(data, size, size, smoothing);
+        data = removeSmallPatternComponents(data, size, size, Math.max(4, (smoothing + 1) * (smoothing + 1)));
+      }
       state.islandsRemoved = currentMode() === "cut" ? removeSolidIslands(data, size) : 0;
       state.mask = { data, size };
-      pixels = ctx.createImageData(size, size);
-      for (let index = 0; index < data.length; index += 1) {
-        const value = data[index] ? 30 : 247;
-        pixels.data[index * 4] = data[index] ? 236 : value;
-        pixels.data[index * 4 + 1] = data[index] ? 106 : value;
-        pixels.data[index * 4 + 2] = data[index] ? 58 : value;
-        pixels.data[index * 4 + 3] = 255;
-      }
-      ctx.putImageData(pixels, 0, 0);
+      drawPatternPreview(data);
+      const adjustment = `比例 ${(currentPatternScale() * 100).toFixed(0)}% · 平滑 ${smoothing}`;
       controls.patternStatus.textContent = state.islandsRemoved
-        ? `已自动移除 ${state.islandsRemoved} 个无法连接主体的孤岛。`
-        : `${currentMode() === "cut" ? "橙色区域将被切穿" : "橙色区域将生成浮雕"}。`;
+        ? `已自动移除 ${state.islandsRemoved} 个无法连接主体的孤岛 · ${adjustment}。`
+        : `${currentMode() === "cut" ? "橙色区域将被切穿" : "橙色区域将生成浮雕"} · ${adjustment}。`;
       scheduleRebuild();
+    }
+
+    function dilate(mask, width, height, radius) {
+      if (radius <= 0) return mask;
+      const horizontal = new Uint8Array(mask.length);
+      const output = new Uint8Array(mask.length);
+      for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) {
+        let filled = false;
+        for (let offset = -radius; offset <= radius && !filled; offset += 1) {
+          const sampleX = x + offset;
+          filled = sampleX >= 0 && sampleX < width && mask[y * width + sampleX] === 1;
+        }
+        horizontal[y * width + x] = filled ? 1 : 0;
+      }
+      for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) {
+        let filled = false;
+        for (let offset = -radius; offset <= radius && !filled; offset += 1) {
+          const sampleY = y + offset;
+          filled = sampleY >= 0 && sampleY < height && horizontal[sampleY * width + x] === 1;
+        }
+        output[y * width + x] = filled ? 1 : 0;
+      }
+      return output;
+    }
+
+    function erode(mask, width, height, radius) {
+      if (radius <= 0) return mask;
+      const horizontal = new Uint8Array(mask.length);
+      const output = new Uint8Array(mask.length);
+      for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) {
+        let filled = true;
+        for (let offset = -radius; offset <= radius && filled; offset += 1) {
+          const sampleX = x + offset;
+          filled = sampleX >= 0 && sampleX < width && mask[y * width + sampleX] === 1;
+        }
+        horizontal[y * width + x] = filled ? 1 : 0;
+      }
+      for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) {
+        let filled = true;
+        for (let offset = -radius; offset <= radius && filled; offset += 1) {
+          const sampleY = y + offset;
+          filled = sampleY >= 0 && sampleY < height && horizontal[sampleY * width + x] === 1;
+        }
+        output[y * width + x] = filled ? 1 : 0;
+      }
+      return output;
+    }
+
+    function closeMask(mask, width, height, radius) {
+      return erode(dilate(mask, width, height, radius), width, height, radius);
+    }
+
+    function smoothMask(mask, width, height, iterations) {
+      let source = mask;
+      let output = new Uint8Array(mask.length);
+      for (let pass = 0; pass < iterations; pass += 1) {
+        for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) {
+          let count = 0;
+          for (let oy = -1; oy <= 1; oy += 1) for (let ox = -1; ox <= 1; ox += 1) {
+            const sampleX = x + ox, sampleY = y + oy;
+            if (sampleX >= 0 && sampleX < width && sampleY >= 0 && sampleY < height) count += source[sampleY * width + sampleX];
+          }
+          const index = y * width + x;
+          output[index] = source[index] ? (count >= 4 ? 1 : 0) : (count >= 6 ? 1 : 0);
+        }
+        const next = source;
+        source = output;
+        output = next;
+      }
+      return source;
+    }
+
+    function removeSmallPatternComponents(mask, width, height, minimumArea) {
+      const visited = new Uint8Array(mask.length);
+      const output = new Uint8Array(mask.length);
+      const queue = new Int32Array(mask.length);
+      for (let start = 0; start < mask.length; start += 1) {
+        if (!mask[start] || visited[start]) continue;
+        let head = 0, tail = 0;
+        queue[tail++] = start;
+        visited[start] = 1;
+        while (head < tail) {
+          const index = queue[head++], x = index % width, y = Math.floor(index / width);
+          const neighbours = [x > 0 ? index - 1 : -1, x < width - 1 ? index + 1 : -1, y > 0 ? index - width : -1, y < height - 1 ? index + width : -1];
+          neighbours.forEach((next) => {
+            if (next >= 0 && mask[next] && !visited[next]) { visited[next] = 1; queue[tail++] = next; }
+          });
+        }
+        if (tail >= minimumArea) for (let index = 0; index < tail; index += 1) output[queue[index]] = 1;
+      }
+      return output;
     }
 
     function removeSolidIslands(mask, size) {
@@ -938,9 +1070,10 @@
       const enabled = activeClipIndices(p).length;
       const strengthName = { easy:"容易拆装", balanced:"均衡", reinforced:"加强且可拆" }[p.strengthPreset];
       const fitName = { tight:"偏紧", standard:"标准", loose:"偏松" }[p.fitPreset];
-      const clipDimensions = `径向宽度 ${p.contactLength} mm；根/末爪厚 ${p.legThickness}/${p.tipThickness} mm；间隙 ${p.sideClearance} mm；倒钩深度 ${p.engagement} mm；倒钩高度 ${p.hookHeight} mm；防脱棱 ${p.ridgeEnabled ? `${p.ridgeHeight} mm` : "关闭"}；拆卸拨片 ${p.releaseTabs ? "开启" : "关闭"}`;
+      const clipDimensions = `开口宽度 ${p.openingWidth} mm；径向宽度 ${p.contactLength} mm；根/末爪厚 ${p.legThickness}/${p.tipThickness} mm；边缘间隙 ${p.sideClearance} mm；单侧外勾 ${p.hookReach} mm；倒钩轴向高度 ${p.hookHeight} mm；导入坡度 ${p.insertionAngle.toFixed(1)}°；外侧防脱棱 ${p.ridgeEnabled ? `${p.ridgeHeight} mm` : "关闭"}；向内捏合片 ${p.releaseTabs ? "开启" : "关闭"}`;
+      const patternSettings = `比例 ${(p.patternScale * 100).toFixed(0)}%；轮廓平滑 ${p.patternSmoothing}；阈值 ${numberValue(controls.threshold)}；反色 ${controls.invertPattern.checked ? "开启" : "关闭"}`;
       const geometryCheck = state.geometryVerification ? `${state.geometryVerification.status}; components=${state.geometryVerification.componentCount}; invalidEdges=${state.geometryVerification.invalidEdges}` : "Unavailable";
-      const model = `<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="zh-CN" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Title">婴儿车装饰轮毂盖 ${p.coverDiameter}mm</metadata><metadata name="Application">婴儿车轮毂盖生成器</metadata><metadata name="Description">非承力装饰件；${enabled} 组轮辐双爪；${p.mode === "cut" ? "贯穿镂空" : "浅浮雕"}</metadata><metadata name="StrengthPreset">${strengthName}</metadata><metadata name="FitPreset">${fitName}</metadata><metadata name="ClipSettings">${state.customClipSettings ? "自定义" : "跟随预设"}</metadata><metadata name="ClipDimensions">${clipDimensions}</metadata><metadata name="EstimatedStrain">${p.estimatedStrain.toFixed(2)}%</metadata><metadata name="GeometryKernel">Manifold 3.5.1</metadata><metadata name="GeometryCheck">${geometryCheck}</metadata><resources><object id="1" type="model" name="${escapeXml(`轮毂盖-${enabled}组双爪`)}"><mesh><vertices>${vertexXml}</vertices><triangles>${faceXml}</triangles></mesh></object></resources><build><item objectid="1"/></build></model>`;
+      const model = `<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="zh-CN" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Title">婴儿车装饰轮毂盖 ${p.coverDiameter}mm</metadata><metadata name="Application">婴儿车轮毂盖生成器</metadata><metadata name="Description">非承力装饰件；${enabled} 组同开口向外双爪；${p.mode === "cut" ? "贯穿镂空" : "浅浮雕"}</metadata><metadata name="StrengthPreset">${strengthName}</metadata><metadata name="FitPreset">${fitName}</metadata><metadata name="ClipSettings">${state.customClipSettings ? "自定义" : "跟随预设"}</metadata><metadata name="ClipDimensions">${clipDimensions}</metadata><metadata name="PatternSettings">${patternSettings}</metadata><metadata name="EstimatedStrain">${p.estimatedStrain.toFixed(2)}%</metadata><metadata name="GeometryKernel">Manifold 3.5.1</metadata><metadata name="GeometryCheck">${geometryCheck}</metadata><resources><object id="1" type="model" name="${escapeXml(`轮毂盖-${enabled}组向外双爪`)}"><mesh><vertices>${vertexXml}</vertices><triangles>${faceXml}</triangles></mesh></object></resources><build><item objectid="1"/></build></model>`;
       const types = `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>`;
       const rels = `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>`;
       return createStoredZip([{ name:"[Content_Types].xml", content:types }, { name:"_rels/.rels", content:rels }, { name:"3D/3dmodel.model", content:model }]);
@@ -952,7 +1085,7 @@
       anchor.href = url; anchor.download = filename; document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
     function filename(extension) { const p = params(); return `婴儿车轮毂盖-${p.coverDiameter}mm-${activeClipIndices(p).length}组双爪-${p.mode === "cut" ? "镂空" : "浮雕"}.${extension}`; }
-    function trialFilename() { const p = params(); return `单组试装双爪-轮辐${p.spokeWidth}mm-深度${p.spokeBackDepth}mm-倒钩${p.engagement}mm.stl`; }
+    function trialFilename() { const p = params(); return `单组试装向外双爪-开口${p.openingWidth}mm-深度${p.spokeBackDepth}mm-外勾${p.hookReach}mm.stl`; }
     function showToast(message) { controls.toast.textContent = message; controls.toast.classList.add("show"); clearTimeout(showToast.timer); showToast.timer = setTimeout(() => controls.toast.classList.remove("show"), 2400); }
 
     $$('input[type="range"][data-pair]').forEach((range) => {
@@ -960,12 +1093,12 @@
       range.addEventListener("input", () => {
         number.value = range.value;
         if (range.dataset.pair === "clipCount") resetClipGroups(range.value);
-        if (["threshold", "smoothing"].includes(range.dataset.pair)) processImage(); else scheduleRebuild();
+        if (["patternScale", "threshold", "smoothing"].includes(range.dataset.pair)) processImage(); else scheduleRebuild();
       });
       number.addEventListener("input", () => {
         range.value = number.value;
         if (range.dataset.pair === "clipCount") resetClipGroups(number.value);
-        if (["threshold", "smoothing"].includes(range.dataset.pair)) processImage(); else scheduleRebuild();
+        if (["patternScale", "threshold", "smoothing"].includes(range.dataset.pair)) processImage(); else scheduleRebuild();
       });
     });
     controls.clipGroupPicker.addEventListener("click", (event) => {
@@ -1017,7 +1150,7 @@
       try {
         const trial = await buildTrialClipGeometry(p);
         download(trianglesToBinaryStl(trial.triangles), trialFilename(), "application/octet-stream");
-        showToast(`单组试装爪已导出：${trial.verification.componentCount} 个封闭实体，圆底座已朝向打印平台`);
+        showToast(`单组向外双爪已导出：${trial.verification.componentCount} 个封闭实体，圆底座已朝向打印平台`);
       } catch (error) {
         showToast(`试装件生成失败：${error instanceof Error ? error.message : String(error)}`);
       } finally {

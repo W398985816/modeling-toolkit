@@ -25,9 +25,9 @@ export function deriveStructure(raw, custom = null) {
     reinforced: { thicknessDivisor:10, thicknessMin:1.8, thicknessMax:2.8, contactRatio:.7, contactMin:12, contactMax:20, rootRatio:.25, rootMin:4, rootMax:7, flareRatio:.9 }
   }[raw.strengthPreset];
   const fit = {
-    tight: { sideClearance:.25, engagement:1 },
-    standard: { sideClearance:.35, engagement:.8 },
-    loose: { sideClearance:.45, engagement:.65 }
+    tight: { sideClearance:.25, hookReach:1 },
+    standard: { sideClearance:.35, hookReach:.8 },
+    loose: { sideClearance:.45, hookReach:.65 }
   }[raw.fitPreset];
   const automatic = {
     ...raw,
@@ -37,9 +37,9 @@ export function deriveStructure(raw, custom = null) {
     legThickness:clamp(raw.spokeBackDepth / strength.thicknessDivisor, strength.thicknessMin, strength.thicknessMax),
     rootHeight:clamp(raw.spokeBackDepth * strength.rootRatio, strength.rootMin, strength.rootMax),
     sideClearance:fit.sideClearance,
-    engagement:fit.engagement,
-    hookHeight:Math.max(1.4, fit.engagement + .6),
-    chamfer:fit.engagement,
+    hookReach:fit.hookReach,
+    hookHeight:Math.max(1.4, fit.hookReach + .6),
+    insertionRampHeight:fit.hookReach + fit.sideClearance,
     ridgeHeight:raw.ridgeHeight ?? .4,
     ridgeEnabled:raw.ridgeEnabled ?? true,
     releaseTabs:raw.releaseTabs ?? true,
@@ -52,20 +52,23 @@ export function deriveStructure(raw, custom = null) {
   result.tipThickness = Math.max(1.2, result.legThickness * .72);
   result.tipWidth = Math.max(8, result.contactLength * .82);
   result.releaseTabLength = result.releaseTabs ? 3 : 0;
-  result.flexPerJaw = Math.max(0, result.engagement - result.sideClearance);
+  result.flexPerJaw = Math.max(0, result.hookReach);
   result.freeLength = Math.max(2, raw.spokeBackDepth - result.rootHeight);
+  result.insertionAngle = Math.atan2(result.hookReach + result.sideClearance, result.insertionRampHeight) * 180 / Math.PI;
+  result.retentionArea = result.hookReach * result.tipWidth;
   // 仍使用等截面悬臂公式，渐变爪的实际应变会更低，因此这是保守筛查值。
   result.estimatedStrain = 1.5 * result.legThickness * result.flexPerJaw / (result.freeLength * result.freeLength) * 100;
   return result;
 }
 
 export function clipMetrics(p, activeIndices) {
-  const tabAllowance = p.releaseTabs ? p.releaseTabLength : 0;
-  const pairWidth = p.spokeWidth + 2 * (p.sideClearance + p.legThickness + p.rootFlare + tabAllowance);
+  const pairWidth = p.openingWidth + 2 * p.hookReach;
   return {
     coverRadius:p.coverDiameter / 2,
     pairWidth,
-    jawOpening:p.spokeWidth + p.sideClearance * 2,
+    jawOuterSpan:p.openingWidth - p.sideClearance * 2,
+    centerGap:p.openingWidth - 2 * (p.sideClearance + p.tipThickness),
+    hookSpan:pairWidth,
     availableArc:2 * Math.PI * p.clipRadius / p.clipCount - pairWidth,
     enabled:activeIndices.length,
     flexPerJaw:p.flexPerJaw
@@ -85,11 +88,14 @@ export function validateDesign(p, activeIndices, patternReport = null) {
   if (p.legThickness < 1.2) errors.push("卡爪根部厚度不能小于 1.2 mm");
   if (p.tipThickness + 1e-6 < p.nozzleWidth * 3) errors.push("卡爪末端不足 3 道喷嘴线宽");
   if (p.sideClearance < .1) errors.push("单侧装配间隙不能小于 0.1 mm");
-  if (p.engagement >= p.legThickness + p.sideClearance) errors.push("倒钩深度过大，双爪无法安全张开");
-  if (p.chamfer < p.engagement) errors.push("导入斜面高度应不小于倒钩深度");
-  if (p.chamfer > p.hookHeight) errors.push("导入斜面高度不能超过倒钩高度");
+  if (m.centerGap < Math.max(2, p.releaseTabLength * 2 + 1)) errors.push("轮辐开口过窄，无法容纳双爪弹性间隙和拆卸拨片");
+  if (p.hookReach < .3) errors.push("每侧倒钩外伸量不能小于 0.3 mm");
+  if (p.hookReach > p.legThickness * 1.25) errors.push("倒钩外伸量相对爪片厚度过大，根部应力过高");
+  if (p.insertionRampHeight < p.hookReach + p.sideClearance) errors.push("导入斜面过陡；高度应不小于装配间隙与倒钩外伸量之和");
+  if (p.insertionRampHeight > p.hookHeight) errors.push("导入斜面高度不能超过倒钩轴向高度");
   if (p.ridgeEnabled && p.ridgeHeight < p.layerHeight * 2) errors.push("防脱棱高度至少需要 2 层打印高度");
-  if (p.ridgeEnabled && p.ridgeHeight > p.engagement) errors.push("防脱棱高度不能大于倒钩深度");
+  if (p.ridgeEnabled && p.ridgeHeight > p.hookReach) errors.push("防脱棱高度不能大于倒钩外伸量");
+  if (p.retentionArea < 6) warnings.push("单爪承力面积偏小，建议增加倒钩外伸量或爪片径向宽度");
   if (p.estimatedStrain > 3) errors.push(`预计卡爪应变 ${p.estimatedStrain.toFixed(1)}%，超过 PETG 设计筛查上限 3%`);
   else if (p.estimatedStrain > 2) warnings.push(`预计卡爪应变 ${p.estimatedStrain.toFixed(1)}%，建议先打印单组试装`);
   if (p.spokeBackDepth / p.legThickness > 24) errors.push("卡爪长宽比过大，渐变结构仍不足以控制摆动");
@@ -109,10 +115,11 @@ export function validateTrialClip(p) {
   const errors = [];
   if (p.spokeBackDepth <= p.rootHeight + 2) errors.push("卡扣总深度过短");
   if (p.contactLength < 8 || p.legThickness < 1.2 || p.sideClearance < .1) errors.push("卡爪基础尺寸过小");
-  if (p.engagement >= p.legThickness + p.sideClearance) errors.push("倒钩深度过大");
-  if (p.chamfer < p.engagement || p.chamfer > p.hookHeight) errors.push("倒钩导入斜面尺寸无效");
+  if (p.openingWidth - 2 * (p.sideClearance + p.tipThickness) < Math.max(2, p.releaseTabLength * 2 + 1)) errors.push("轮辐开口无法容纳双爪和拆卸拨片");
+  if (p.hookReach < .3 || p.hookReach > p.legThickness * 1.25) errors.push("倒钩外伸量无效");
+  if (p.insertionRampHeight < p.hookReach + p.sideClearance || p.insertionRampHeight > p.hookHeight) errors.push("倒钩导入斜面尺寸无效");
   if (p.ridgeEnabled && p.ridgeHeight < p.layerHeight * 2) errors.push("防脱棱不足两层高度");
-  if (p.ridgeEnabled && p.ridgeHeight > p.engagement) errors.push("防脱棱高度不能大于倒钩深度");
+  if (p.ridgeEnabled && p.ridgeHeight > p.hookReach) errors.push("防脱棱高度不能大于倒钩外伸量");
   if (p.estimatedStrain > 3) errors.push("预计卡爪应变超过 3%");
   return { valid:errors.length === 0, errors };
 }
@@ -167,11 +174,13 @@ function hullPair(Manifold, first, second) {
   return result;
 }
 
-function clawSection(Manifold, p, angleDegrees, side, radialWidth, thickness, z, zThickness, outerExtra = 0) {
-  const base = p.spokeWidth / 2 + p.sideClearance;
+function clawSection(Manifold, p, angleDegrees, side, radialWidth, thickness, z, zThickness, inwardExtra = 0) {
+  const edge = p.openingWidth / 2;
+  const outerFace = side > 0 ? edge - p.sideClearance : -edge + p.sideClearance;
   const radial0 = p.clipRadius - radialWidth / 2;
-  const tangent0 = side > 0 ? base : -base - thickness - outerExtra;
-  const tangent1 = side > 0 ? base + thickness + outerExtra : -base;
+  // 两爪都位于同一个轮辐开口内；加宽只朝开口中心延伸，避免根座撞到开口边缘。
+  const tangent0 = side > 0 ? outerFace - thickness - inwardExtra : outerFace;
+  const tangent1 = side > 0 ? outerFace : outerFace + thickness + inwardExtra;
   return transformedBox(
     Manifold,
     [radialWidth, tangent1 - tangent0, zThickness],
@@ -194,28 +203,32 @@ function buildTaperedArm(wasm, p, angle, side) {
 
 function buildHook(wasm, p, angle, side) {
   const { Manifold } = wasm;
-  const base = p.spokeWidth / 2 + p.sideClearance;
-  const outer = base + p.tipThickness;
-  const ridgeRadius = p.ridgeEnabled ? p.ridgeHeight / 2 : 0;
-  const inner = base - p.engagement;
-  const ridgeJoin = inner + ridgeRadius * 1.5;
+  const edge = p.openingWidth / 2;
+  const armOuter = edge - p.sideClearance;
+  const armInner = armOuter - p.tipThickness;
+  const hookOuter = edge + p.hookReach;
+  const ridgeTangentRadius = p.ridgeEnabled ? Math.min(p.hookReach * .38, p.ridgeHeight * .55) : 0;
+  const ridgeAxialRadius = p.ridgeEnabled ? p.ridgeHeight * .65 : 0;
+  const backFace = -p.spokeBackDepth;
+  const leadingFace = backFace - p.hookHeight;
   const profile = [
-    { t:outer, z:-p.spokeBackDepth - p.hookHeight },
-    { t:outer, z:-p.spokeBackDepth },
-    { t:ridgeJoin, z:-p.spokeBackDepth },
-    { t:ridgeJoin, z:-p.spokeBackDepth - p.hookHeight + p.chamfer },
-    { t:base, z:-p.spokeBackDepth - p.hookHeight }
+    { t:armInner, z:leadingFace },
+    { t:armOuter, z:leadingFace },
+    { t:hookOuter, z:leadingFace + p.insertionRampHeight },
+    { t:hookOuter, z:backFace },
+    { t:armInner, z:backFace }
   ];
   const orientedProfile = side > 0 ? profile : profile.map((point) => ({ t:-point.t, z:point.z })).reverse();
   const radial0 = p.clipRadius - p.tipWidth / 2;
   const radial1 = p.clipRadius + p.tipWidth / 2;
   const parts = [manifoldFromProfilePrism(wasm, angle, radial0, radial1, orientedProfile)];
-  if (ridgeRadius > 0) {
+  if (ridgeTangentRadius > 0) {
+    const ridgeCenter = edge + p.hookReach * .5;
     const circle = Array.from({ length:12 }, (_, index) => {
       const theta = Math.PI * 2 * index / 12;
       return {
-        t:inner + ridgeRadius + Math.cos(theta) * ridgeRadius,
-        z:-p.spokeBackDepth - ridgeRadius + Math.sin(theta) * ridgeRadius
+        t:ridgeCenter + Math.cos(theta) * ridgeTangentRadius,
+        z:backFace + p.ridgeHeight * .35 + Math.sin(theta) * ridgeAxialRadius
       };
     });
     const orientedCircle = side > 0 ? circle : circle.map((point) => ({ t:-point.t, z:point.z })).reverse();
@@ -249,7 +262,7 @@ function buildClipSolids(wasm, p, activeIndices) {
 function rootProtection(wasm, p, activeIndices) {
   const { CrossSection } = wasm;
   const radialWidth = p.contactLength + 2 * p.rootFlare + 4;
-  const tangentWidth = p.spokeWidth + 2 * (p.sideClearance + p.legThickness + p.rootFlare + 2);
+  const tangentWidth = p.openingWidth + p.minWall * 2;
   const rootInner = p.clipRadius - radialWidth / 2;
   const rootOuter = p.clipRadius + radialWidth / 2;
   const ringInner = p.coverDiameter / 2 - p.outerRingWidth;
@@ -318,13 +331,34 @@ function maskRectangles(mask, patternRadius) {
 function vectorPattern(wasm, p, mask) {
   const { CrossSection } = wasm;
   const patternRadius = Math.max(4, p.coverDiameter / 2 - p.outerRingWidth);
-  if (!mask) return defaultPattern(wasm, patternRadius);
-  const rectangles = maskRectangles(mask, patternRadius);
-  if (!rectangles.length) return CrossSection.circle(.01, 8);
-  const raw = new CrossSection(rectangles, "Positive");
-  const simplified = raw.simplify(Math.max(.06, patternRadius / 1800));
-  raw.delete();
-  return simplified;
+  let pattern;
+  if (!mask) {
+    pattern = defaultPattern(wasm, patternRadius);
+  } else {
+    const rectangles = maskRectangles(mask, patternRadius);
+    if (!rectangles.length) return CrossSection.circle(.01, 8);
+    const raw = new CrossSection(rectangles, "Positive");
+    pattern = raw.simplify(Math.max(.04, patternRadius / 2400));
+    raw.delete();
+  }
+  const scale = clamp(p.patternScale ?? 1, .3, 1);
+  const scaled = pattern.scale(scale);
+  pattern.delete();
+  const smoothing = mask ? clamp(Math.round(p.patternSmoothing ?? 0), 0, 8) : 0;
+  if (!smoothing) return scaled;
+  const pixelSize = patternRadius * 2 / mask.size * scale;
+  const rounding = Math.min(p.minWall * .55, pixelSize * smoothing * .45);
+  const closedOut = scaled.offset(rounding, "Round", 2, 16);
+  scaled.delete();
+  const closed = closedOut.offset(-rounding, "Round", 2, 16);
+  closedOut.delete();
+  const openedIn = closed.offset(-rounding, "Round", 2, 16);
+  closed.delete();
+  const opened = openedIn.offset(rounding, "Round", 2, 16);
+  openedIn.delete();
+  const result = opened.simplify(Math.max(.035, pixelSize * .12));
+  opened.delete();
+  return result;
 }
 
 function buildCoverSection(wasm, p, activeIndices, mask) {
@@ -469,10 +503,14 @@ function referenceTriangles(p, activeIndices) {
       .forEach(([a,b,c]) => triangles.push({ a:vertices[a], b:vertices[b], c:vertices[c], color }));
   };
   const radialLength = p.contactLength * 1.9;
+  const edgeWidth = Math.max(5, p.legThickness + p.hookReach + 3);
   activeIndices.forEach((index) => {
     const angle = p.startAngle + Math.PI * 2 * index / p.clipCount;
-    addBox(angle, p.clipRadius-radialLength/2, p.clipRadius+radialLength/2, -p.spokeWidth/2, p.spokeWidth/2, -p.spokeBackDepth, 0, [.10,.44,.42,.18]);
-    addBox(angle, p.clipRadius-radialLength/2, p.clipRadius+radialLength/2, -p.spokeWidth/2-1, p.spokeWidth/2+1, -p.spokeBackDepth-.35, -p.spokeBackDepth, [.08,.30,.29,.28]);
+    const halfOpening = p.openingWidth / 2;
+    addBox(angle, p.clipRadius-radialLength/2, p.clipRadius+radialLength/2, -halfOpening-edgeWidth, -halfOpening, -p.spokeBackDepth, 0, [.10,.44,.42,.18]);
+    addBox(angle, p.clipRadius-radialLength/2, p.clipRadius+radialLength/2, halfOpening, halfOpening+edgeWidth, -p.spokeBackDepth, 0, [.10,.44,.42,.18]);
+    addBox(angle, p.clipRadius-radialLength/2, p.clipRadius+radialLength/2, -halfOpening-edgeWidth-1, -halfOpening, -p.spokeBackDepth-.35, -p.spokeBackDepth, [.08,.30,.29,.28]);
+    addBox(angle, p.clipRadius-radialLength/2, p.clipRadius+radialLength/2, halfOpening, halfOpening+edgeWidth+1, -p.spokeBackDepth-.35, -p.spokeBackDepth, [.08,.30,.29,.28]);
   });
   return triangles;
 }
@@ -540,6 +578,6 @@ export async function buildTrialClipGeometry(p) {
 export function trialBaseRadius(p) {
   return Math.hypot(
     p.contactLength / 2 + p.rootFlare + 3,
-    p.spokeWidth / 2 + p.sideClearance + p.legThickness + p.rootFlare + p.releaseTabLength + 3
+    p.openingWidth / 2 + p.hookReach + 3
   );
 }
