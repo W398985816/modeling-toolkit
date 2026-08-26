@@ -38,9 +38,6 @@ export function deriveStructure(raw, custom = null) {
     rootHeight:clamp(raw.spokeBackDepth * strength.rootRatio, strength.rootMin, strength.rootMax),
     sideClearance:fit.sideClearance,
     hookReach:fit.hookReach,
-    hookHeight:Math.max(1.4, fit.hookReach + .6),
-    insertionRampHeight:fit.hookReach + fit.sideClearance,
-    releaseTabs:raw.releaseTabs ?? true,
     minWall:1.2,
     nozzleWidth:.4,
     layerHeight:.2
@@ -49,7 +46,10 @@ export function deriveStructure(raw, custom = null) {
   result.rootFlare = clamp(result.legThickness * strength.flareRatio, 1, 2.6);
   result.tipThickness = Math.max(1.2, result.legThickness * .72);
   result.tipWidth = Math.max(8, result.contactLength * .82);
-  result.releaseTabLength = result.releaseTabs ? 3 : 0;
+  // 导入段按 45° 上限自动计算，末端再保留至少两层打印高度作为承力平台。
+  result.hookLandHeight = Math.max(result.layerHeight * 2, result.nozzleWidth);
+  result.insertionRampHeight = result.hookReach + result.sideClearance;
+  result.hookHeight = result.insertionRampHeight + result.hookLandHeight;
   result.flexPerJaw = Math.max(0, result.hookReach);
   result.freeLength = Math.max(2, raw.spokeBackDepth - result.rootHeight);
   result.insertionAngle = Math.atan2(result.hookReach + result.sideClearance, result.insertionRampHeight) * 180 / Math.PI;
@@ -80,17 +80,15 @@ export function validateDesign(p, activeIndices, patternReport = null) {
   if (m.enabled < 3) errors.push("至少需要保留 3 组双爪卡扣");
   if (p.clipRadius - p.contactLength / 2 - p.rootFlare < 3) errors.push("卡扣安装半径过小，加强根座已越过盖板中心");
   if (p.clipRadius + p.contactLength / 2 + p.rootFlare + 2 > m.coverRadius) errors.push("卡扣加强根座超出盖板外缘");
-  if (m.availableArc < 3) errors.push("相邻卡爪或拆卸拨片间距小于 3 mm");
+  if (m.availableArc < 3) errors.push("相邻卡爪间距小于 3 mm");
   if (p.spokeBackDepth <= p.rootHeight + 2) errors.push("卡扣总深度过短，无法保留根部渐变区和弹性直段");
   if (p.contactLength < 8) errors.push("卡爪径向宽度不能小于 8 mm");
   if (p.legThickness < 1.2) errors.push("卡爪根部厚度不能小于 1.2 mm");
   if (p.tipThickness + 1e-6 < p.nozzleWidth * 3) errors.push("卡爪末端不足 3 道喷嘴线宽");
   if (p.sideClearance < .1) errors.push("单侧装配间隙不能小于 0.1 mm");
-  if (m.centerGap < Math.max(2, p.releaseTabLength * 2 + 1)) errors.push("轮辐开口过窄，无法容纳双爪弹性间隙和拆卸拨片");
+  if (m.centerGap < 2) errors.push("轮辐开口过窄，双爪之间的弹性间隙不足 2 mm");
   if (p.hookReach < .3) errors.push("每侧倒钩外伸量不能小于 0.3 mm");
   if (p.hookReach > p.legThickness * 1.25) errors.push("倒钩外伸量相对爪片厚度过大，根部应力过高");
-  if (p.insertionRampHeight < p.hookReach + p.sideClearance) errors.push("导入斜面过陡；高度应不小于装配间隙与倒钩外伸量之和");
-  if (p.insertionRampHeight > p.hookHeight) errors.push("导入斜面高度不能超过倒钩轴向高度");
   if (p.retentionArea < 6) warnings.push("单爪承力面积偏小，建议增加倒钩外伸量或爪片径向宽度");
   if (p.estimatedStrain > 3) errors.push(`预计卡爪应变 ${p.estimatedStrain.toFixed(1)}%，超过 PETG 设计筛查上限 3%`);
   else if (p.estimatedStrain > 2) warnings.push(`预计卡爪应变 ${p.estimatedStrain.toFixed(1)}%，建议先打印单组试装`);
@@ -111,9 +109,8 @@ export function validateTrialClip(p) {
   const errors = [];
   if (p.spokeBackDepth <= p.rootHeight + 2) errors.push("卡扣总深度过短");
   if (p.contactLength < 8 || p.legThickness < 1.2 || p.sideClearance < .1) errors.push("卡爪基础尺寸过小");
-  if (p.openingWidth - 2 * (p.sideClearance + p.tipThickness) < Math.max(2, p.releaseTabLength * 2 + 1)) errors.push("轮辐开口无法容纳双爪和拆卸拨片");
+  if (p.openingWidth - 2 * (p.sideClearance + p.tipThickness) < 2) errors.push("轮辐开口无法为双爪保留足够弹性间隙");
   if (p.hookReach < .3 || p.hookReach > p.legThickness * 1.25) errors.push("倒钩外伸量无效");
-  if (p.insertionRampHeight < p.hookReach + p.sideClearance || p.insertionRampHeight > p.hookHeight) errors.push("倒钩导入斜面尺寸无效");
   if (p.estimatedStrain > 3) errors.push("预计卡爪应变超过 3%");
   return { valid:errors.length === 0, errors };
 }
@@ -196,7 +193,6 @@ function buildTaperedArm(wasm, p, angle, side) {
 }
 
 function buildHook(wasm, p, angle, side) {
-  const { Manifold } = wasm;
   const edge = p.openingWidth / 2;
   const armOuter = edge - p.sideClearance;
   const armInner = armOuter - p.tipThickness;
@@ -213,16 +209,7 @@ function buildHook(wasm, p, angle, side) {
   const orientedProfile = side > 0 ? profile : profile.map((point) => ({ t:-point.t, z:point.z })).reverse();
   const radial0 = p.clipRadius - p.tipWidth / 2;
   const radial1 = p.clipRadius + p.tipWidth / 2;
-  const parts = [manifoldFromProfilePrism(wasm, angle, radial0, radial1, orientedProfile)];
-  if (p.releaseTabs) {
-    const angleDegrees = degrees(angle);
-    const tabWidth = Math.max(7, p.tipWidth * .58);
-    const tabZ = -p.spokeBackDepth - p.hookHeight + .2;
-    const near = clawSection(Manifold, p, angleDegrees, side, tabWidth, p.tipThickness, tabZ, 1, .25);
-    const far = clawSection(Manifold, p, angleDegrees, side, tabWidth, p.tipThickness, tabZ + .15, .7, p.releaseTabLength);
-    parts.push(hullPair(Manifold, near, far));
-  }
-  return unionAndDispose(Manifold, parts);
+  return manifoldFromProfilePrism(wasm, angle, radial0, radial1, orientedProfile);
 }
 
 function buildClipSolids(wasm, p, activeIndices) {
@@ -325,20 +312,27 @@ function vectorPattern(wasm, p, mask) {
   const scaled = pattern.scale(scale);
   pattern.delete();
   const smoothing = mask ? clamp(Math.round(p.patternSmoothing ?? 0), 0, 8) : 0;
-  if (!smoothing) return scaled;
-  const pixelSize = patternRadius * 2 / mask.size * scale;
-  const rounding = Math.min(p.minWall * .55, pixelSize * smoothing * .45);
-  const closedOut = scaled.offset(rounding, "Round", 2, 16);
-  scaled.delete();
-  const closed = closedOut.offset(-rounding, "Round", 2, 16);
-  closedOut.delete();
-  const openedIn = closed.offset(-rounding, "Round", 2, 16);
-  closed.delete();
-  const opened = openedIn.offset(rounding, "Round", 2, 16);
-  openedIn.delete();
-  const result = opened.simplify(Math.max(.035, pixelSize * .12));
-  opened.delete();
-  return result;
+  let processed = scaled;
+  if (smoothing) {
+    const pixelSize = patternRadius * 2 / mask.size * scale;
+    const rounding = Math.min(p.minWall * .55, pixelSize * smoothing * .45);
+    const closedOut = processed.offset(rounding, "Round", 2, 16);
+    processed.delete();
+    const closed = closedOut.offset(-rounding, "Round", 2, 16);
+    closedOut.delete();
+    const openedIn = closed.offset(-rounding, "Round", 2, 16);
+    closed.delete();
+    const opened = openedIn.offset(rounding, "Round", 2, 16);
+    openedIn.delete();
+    processed = opened.simplify(Math.max(.035, pixelSize * .12));
+    opened.delete();
+  }
+  const offsetX = Number.isFinite(p.patternOffsetX) ? p.patternOffsetX : 0;
+  const offsetY = Number.isFinite(p.patternOffsetY) ? p.patternOffsetY : 0;
+  if (!offsetX && !offsetY) return processed;
+  const translated = processed.translate([offsetX, offsetY]);
+  processed.delete();
+  return translated;
 }
 
 function buildCoverSection(wasm, p, activeIndices, mask) {

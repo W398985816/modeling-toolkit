@@ -196,6 +196,8 @@
     .pattern-canvas-wrap { position: relative; border: 1px solid var(--line); background: #fff; }
     #patternCanvas { display: block; width: 100%; height: auto; aspect-ratio: 1; background: white; cursor: crosshair; image-rendering: auto; touch-action: none; }
     .pattern-canvas-wrap[data-view="source"] #patternCanvas { cursor: default; }
+    .pattern-canvas-wrap[data-tool="move"] #patternCanvas { cursor: grab; }
+    .pattern-canvas-wrap.moving #patternCanvas { cursor: grabbing; }
     .pattern-tools, .pattern-actions, .island-actions { display: flex; flex-wrap: wrap; gap: 6px; }
     .pattern-tool, .pattern-action {
       min-height: 32px;
@@ -213,6 +215,8 @@
     .pattern-view-tabs button.active { color: white; background: var(--ink); }
     .editor-size-row { display: grid; grid-template-columns: 72px 68px 1fr; gap: 8px; align-items: center; color: var(--ink-soft); font-size: 10px; }
     .editor-size-row input[type="number"] { width: 100%; min-width: 0; }
+    .pattern-position-row { display: grid; grid-template-columns: 72px 1fr auto; gap: 8px; align-items: center; color: var(--ink-soft); font-size: 10px; }
+    .pattern-position-row strong { color: var(--teal); font: 600 10px var(--mono); }
     .island-panel { display: grid; gap: 7px; padding: 9px; border: 1px solid var(--line); background: var(--paper-deep); }
     .island-panel[hidden] { display: none; }
     .island-summary { display: flex; justify-content: space-between; gap: 10px; color: var(--ink-soft); font-size: 10px; }
@@ -449,16 +453,12 @@
       <details class="section">
         <summary>卡爪微调 <span id="clipDetailStatus" style="float:none;margin-left:8px;color:var(--teal);font:9px var(--mono)">跟随预设</span></summary>
         <div class="section-body">
-          <p class="control-note">预设会自动填入安全起点。两爪位于同一个开口内，倒钩末端相互背离并向外挂住左右背面边缘；修改任一尺寸后进入自定义状态。</p>
+          <p class="control-note">预设会自动填入安全起点。两爪位于同一个开口内，倒钩末端相互背离并向外挂住左右背面边缘；修改任一可调尺寸后进入自定义状态。倒钩轴向高度与导入坡面由外伸量和间隙自动计算。</p>
           <div class="control"><label for="contactLength">爪片径向宽度</label><input id="contactLength" data-clip-custom type="number" min="8" max="30" step="0.5" value="14"></div>
           <div class="control"><label for="legThickness">爪片厚度</label><input id="legThickness" data-clip-custom type="number" min="1.2" max="3.5" step="0.1" value="2"></div>
           <div class="control"><label for="sideClearance">单侧装配间隙</label><input id="sideClearance" data-clip-custom type="number" min="0.1" max="1" step="0.05" value="0.35"></div>
           <div class="control"><label for="hookReach">单侧倒钩外伸量</label><input id="hookReach" data-clip-custom type="number" min="0.3" max="2.5" step="0.05" value="0.8"><p class="control-note">卡爪弹开后，每侧倒钩越过开口边缘的覆盖距离；数值越大，拉脱力和拆卸难度越高。</p></div>
-          <div class="control"><label for="hookHeight">倒钩轴向高度</label><input id="hookHeight" data-clip-custom type="number" min="0.8" max="4" step="0.1" value="1.4"><p class="control-note">从轮辐背面承力面到倒钩最深端的高度。</p></div>
-          <div class="control"><label for="insertionRampHeight">导入斜面高度</label><input id="insertionRampHeight" data-clip-custom type="number" min="0.3" max="4" step="0.1" value="1.15"><p class="control-note">必须覆盖装配间隙与外伸量，保证插入坡度不陡于约 45°。</p></div>
           <div class="control"><label for="rootHeight">根部加强高度</label><input id="rootHeight" data-clip-custom type="number" min="2" max="10" step="0.5" value="5"></div>
-          <label class="inline-check"><span>生成向内捏合拆卸片</span><input id="releaseTabs" type="checkbox" checked></label>
-          <p class="control-note">拆卸时从轮后同时将两片向开口中心捏合，再把轮毂盖向前推出；不要从盖板单边硬撬。</p>
         </div>
       </details>
 
@@ -486,12 +486,15 @@
               </div>
               <div class="pattern-legend"><span class="cut">镂空</span><span class="solid">保留实体</span><span class="island">未连接孤岛</span></div>
               <div class="pattern-tools" role="toolbar" aria-label="镂空编辑工具">
+                <button class="pattern-tool" id="movePattern" type="button" data-pattern-tool="move" aria-pressed="false">移动图案</button>
                 <button class="pattern-tool active" id="cutBrush" type="button" data-pattern-tool="cut" aria-pressed="true">增加镂空</button>
                 <button class="pattern-tool" id="smoothCutBrush" type="button" data-pattern-tool="smoothCut" aria-pressed="false">平滑镂空</button>
                 <button class="pattern-tool" id="solidBrush" type="button" data-pattern-tool="solid" aria-pressed="false">补回实体</button>
                 <button class="pattern-tool" id="bridgeBrush" type="button" data-pattern-tool="bridge" aria-pressed="false">连接桥</button>
               </div>
-              <label class="editor-size-row"><span id="brushSizeLabel">笔触宽度</span><input id="brushSize" type="number" min="0.4" max="12" step="0.1" value="1.2"><input data-pair="brushSize" type="range" min="0.4" max="12" step="0.1" value="1.2"></label>
+              <label class="editor-size-row" id="brushSizeRow"><span id="brushSizeLabel">笔触宽度</span><input id="brushSize" type="number" min="0.4" max="12" step="0.1" value="1.2"><input data-pair="brushSize" type="range" min="0.4" max="12" step="0.1" value="1.2"></label>
+              <div class="pattern-position-row"><span>图案位置</span><strong id="patternOffsetReadout">X 0.0 · Y 0.0 mm</strong><button class="pattern-action" id="centerPattern" type="button" disabled>恢复居中</button></div>
+              <p class="control-note">选择“移动图案”后在画布中拖动；X 向右为正，Y 向上为正。</p>
               <div class="pattern-actions">
                 <button class="pattern-action" id="undoPattern" type="button" disabled>撤销</button>
                 <button class="pattern-action" id="redoPattern" type="button" disabled>重做</button>
@@ -509,7 +512,7 @@
               </div>
             </div>
           </div>
-          <div class="control"><label for="patternScale">图案比例</label><input id="patternScale" type="number" min="30" max="100" step="1" value="100"><input data-pair="patternScale" type="range" min="30" max="100" step="1" value="100"><p class="control-note">相对于外圈以内可用图案区域的占比；缩小后保持居中，不影响外圈和卡爪根部保护区。</p></div>
+          <div class="control"><label for="patternScale">图案比例</label><input id="patternScale" type="number" min="30" max="100" step="1" value="100"><input data-pair="patternScale" type="range" min="30" max="100" step="1" value="100"><p class="control-note">相对于外圈以内可用图案区域的占比；围绕当前图案中心缩放，不影响外圈和卡爪根部保护区。</p></div>
           <details class="section" style="margin:0">
             <summary>图案微调</summary>
             <div class="section-body">
@@ -585,12 +588,12 @@
       clipRadius: $("#clipRadius"), clipCount: $("#clipCount"), startAngle: $("#startAngle"), openingWidth: $("#openingWidth"),
       spokeBackDepth: $("#spokeBackDepth"),
       contactLength: $("#contactLength"), legThickness: $("#legThickness"), sideClearance: $("#sideClearance"),
-      hookReach: $("#hookReach"), hookHeight: $("#hookHeight"), insertionRampHeight: $("#insertionRampHeight"), rootHeight: $("#rootHeight"), clipDetailStatus: $("#clipDetailStatus"),
-      releaseTabs: $("#releaseTabs"),
+      hookReach: $("#hookReach"), rootHeight: $("#rootHeight"), clipDetailStatus: $("#clipDetailStatus"),
       patternScale: $("#patternScale"), threshold: $("#threshold"), samplingResolution: $("#samplingResolution"), cleanup: $("#cleanup"), closeStrength: $("#closeStrength"), minHoleArea: $("#minHoleArea"), hollowExpansion: $("#hollowExpansion"), smoothing: $("#smoothing"), invertPattern: $("#invertPattern"), reliefHeight: $("#reliefHeight"),
       imageInput: $("#imageInput"), uploadZone: $("#uploadZone"), uploadName: $("#uploadName"), patternCanvas: $("#patternCanvas"),
       patternCanvasWrap: $("#patternCanvasWrap"), patternEditor: $("#patternEditor"), patternStatus: $("#patternStatus"), reliefControl: $("#reliefControl"), previewCanvas: $("#previewCanvas"),
-      cutBrush: $("#cutBrush"), smoothCutBrush: $("#smoothCutBrush"), solidBrush: $("#solidBrush"), bridgeBrush: $("#bridgeBrush"), brushSize: $("#brushSize"), brushSizeLabel: $("#brushSizeLabel"),
+      movePattern: $("#movePattern"), cutBrush: $("#cutBrush"), smoothCutBrush: $("#smoothCutBrush"), solidBrush: $("#solidBrush"), bridgeBrush: $("#bridgeBrush"), brushSize: $("#brushSize"), brushSizeLabel: $("#brushSizeLabel"), brushSizeRow: $("#brushSizeRow"),
+      patternOffsetReadout: $("#patternOffsetReadout"), centerPattern: $("#centerPattern"),
       undoPattern: $("#undoPattern"), redoPattern: $("#redoPattern"), clearPatternEdits: $("#clearPatternEdits"), expandPatternEditor: $("#expandPatternEditor"),
       islandPanel: $("#islandPanel"), islandCounter: $("#islandCounter"), previousIsland: $("#previousIsland"), nextIsland: $("#nextIsland"), autoBridgeIsland: $("#autoBridgeIsland"), deleteIsland: $("#deleteIsland"),
       activeClipCount: $("#activeClipCount"), jawOpening: $("#jawOpening"), clipStrain: $("#clipStrain"), autoDimensions: $("#autoDimensions"),
@@ -614,6 +617,9 @@
       patternUndo: [],
       patternRedo: [],
       patternDraft: null,
+      patternOffsetX: 0,
+      patternOffsetY: 0,
+      patternPan: null,
       mesh: null,
       exportTriangles: [],
       exportMesh: null,
@@ -650,8 +656,6 @@
         legThickness:numberValue(controls.legThickness),
         sideClearance:numberValue(controls.sideClearance),
         hookReach:numberValue(controls.hookReach),
-        hookHeight:numberValue(controls.hookHeight),
-        insertionRampHeight:numberValue(controls.insertionRampHeight),
         rootHeight:numberValue(controls.rootHeight)
       } : null;
       return deriveStructure({
@@ -664,6 +668,8 @@
         strengthPreset:selectedPreset("strengthPreset"),
         fitPreset:selectedPreset("fitPreset"),
         patternScale:currentPatternScale(),
+        patternOffsetX:state.patternOffsetX,
+        patternOffsetY:state.patternOffsetY,
         patternSmoothing:currentPatternSmoothing(),
         samplingResolution:Math.round(numberValue(controls.samplingResolution)),
         cleanup:Math.round(numberValue(controls.cleanup)),
@@ -671,14 +677,13 @@
         minHoleArea:numberValue(controls.minHoleArea),
         hollowExpansion:numberValue(controls.hollowExpansion),
         reliefHeight:numberValue(controls.reliefHeight),
-        mode:currentMode(),
-        releaseTabs:controls.releaseTabs.checked
+        mode:currentMode()
       }, custom);
     }
 
     function syncCustomControls(p) {
       if (state.customClipSettings) return;
-      ["contactLength", "legThickness", "sideClearance", "hookReach", "hookHeight", "insertionRampHeight", "rootHeight"].forEach((name) => {
+      ["contactLength", "legThickness", "sideClearance", "hookReach", "rootHeight"].forEach((name) => {
         controls[name].value = Number(p[name].toFixed(2));
       });
       controls.clipDetailStatus.textContent = "跟随预设";
@@ -761,7 +766,7 @@
       controls.activeClipCount.textContent = `${m.enabled} / ${p.clipCount} 组`;
       controls.jawOpening.textContent = `${m.jawOuterSpan.toFixed(2)} mm`;
       controls.clipStrain.textContent = `${p.estimatedStrain.toFixed(2)}%`;
-      controls.autoDimensions.textContent = `板 ${p.coverThickness.toFixed(1)} · 圈 ${p.outerRingWidth.toFixed(1)} · 爪根/末 ${p.legThickness.toFixed(1)}/${p.tipThickness.toFixed(1)} · 外勾 ${p.hookReach.toFixed(2)} · 坡度 ${p.insertionAngle.toFixed(0)}°`;
+      controls.autoDimensions.textContent = `板 ${p.coverThickness.toFixed(1)} · 圈 ${p.outerRingWidth.toFixed(1)} · 爪根/末 ${p.legThickness.toFixed(1)}/${p.tipThickness.toFixed(1)} · 外勾 ${p.hookReach.toFixed(2)} · 钩高 ${p.hookHeight.toFixed(2)} · 坡度 ${p.insertionAngle.toFixed(0)}°`;
       controls.edgeMeasure.textContent = `外圈保留 ${p.outerRingWidth.toFixed(1)} mm`;
       controls.metricDiameter.textContent = `${p.coverDiameter.toFixed(1)} mm`;
       controls.metricHeight.textContent = `${(p.spokeBackDepth + p.hookHeight + p.coverThickness + (p.mode === "relief" ? p.reliefHeight : 0)).toFixed(1)} mm`;
@@ -802,14 +807,33 @@
       state.rebuildTimer = setTimeout(() => { void rebuildMesh(); }, 120);
     }
 
-    function patternPhysicalSize() {
+    function patternAvailableSize() {
       const p = deriveStructure({
         coverDiameter:numberValue(controls.coverDiameter),
         spokeBackDepth:numberValue(controls.spokeBackDepth),
         strengthPreset:selectedPreset("strengthPreset"),
         fitPreset:selectedPreset("fitPreset")
       });
-      return Math.max(8, (p.coverDiameter - p.outerRingWidth * 2) * currentPatternScale());
+      return Math.max(8, p.coverDiameter - p.outerRingWidth * 2);
+    }
+
+    function patternPhysicalSize() {
+      return patternAvailableSize() * currentPatternScale();
+    }
+
+    function patternOffsetText() {
+      return `X ${state.patternOffsetX.toFixed(1)} · Y ${state.patternOffsetY.toFixed(1)} mm`;
+    }
+
+    function setPatternOffset(x, y, rebuildModel = true) {
+      const limit = patternAvailableSize() / 2;
+      const distance = Math.hypot(x, y);
+      const ratio = distance > limit ? limit / distance : 1;
+      state.patternOffsetX = x * ratio;
+      state.patternOffsetY = y * ratio;
+      drawPatternPreview(state.mask?.data || null);
+      updatePatternEditorControls();
+      if (rebuildModel) scheduleRebuild();
     }
 
     function drawPatternPreview(mask) {
@@ -821,11 +845,15 @@
       ctx.fillRect(0, 0, size, size);
       const scale = currentPatternScale();
       const targetSize = size * scale;
-      const targetOffset = (size - targetSize) / 2;
+      const availableSize = patternAvailableSize();
+      const offsetX = state.patternOffsetX / availableSize * size;
+      const offsetY = -state.patternOffsetY / availableSize * size;
+      const targetOffsetX = (size - targetSize) / 2 + offsetX;
+      const targetOffsetY = (size - targetSize) / 2 + offsetY;
       if (state.patternView === "source" && state.sourcePreview) {
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(state.sourcePreview, targetOffset, targetOffset, targetSize, targetSize);
+        ctx.drawImage(state.sourcePreview, targetOffsetX, targetOffsetY, targetSize, targetSize);
       } else if (!mask) {
         ctx.strokeStyle = "#ec6a3a";
         ctx.lineWidth = size * .115 * scale;
@@ -833,8 +861,8 @@
         for (let index = 0; index < 10; index += 1) {
           const angle = Math.PI * 2 * (index + .5) / 10;
           ctx.beginPath();
-          ctx.moveTo(size / 2 + Math.cos(angle) * size * .188 * scale, size / 2 + Math.sin(angle) * size * .188 * scale);
-          ctx.lineTo(size / 2 + Math.cos(angle) * size * .365 * scale, size / 2 + Math.sin(angle) * size * .365 * scale);
+          ctx.moveTo(size / 2 + offsetX + Math.cos(angle) * size * .188 * scale, size / 2 + offsetY + Math.sin(angle) * size * .188 * scale);
+          ctx.lineTo(size / 2 + offsetX + Math.cos(angle) * size * .365 * scale, size / 2 + offsetY + Math.sin(angle) * size * .365 * scale);
           ctx.stroke();
         }
       } else {
@@ -855,7 +883,7 @@
         sourceCtx.putImageData(preview, 0, 0);
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(source, targetOffset, targetOffset, targetSize, targetSize);
+        ctx.drawImage(source, targetOffsetX, targetOffsetY, targetSize, targetSize);
       }
       ctx.strokeStyle = "#d5cec1";
       ctx.lineWidth = Math.max(1, size / 256);
@@ -879,7 +907,7 @@
         state.exteriorSolid = null;
         drawPatternPreview(null);
         updatePatternEditorControls();
-        controls.patternStatus.textContent = `${currentMode() === "cut" ? "正在使用默认放射镂空" : "默认放射区域将生成浮雕"} · 比例 ${(currentPatternScale() * 100).toFixed(0)}%。`;
+        controls.patternStatus.textContent = `${currentMode() === "cut" ? "正在使用默认放射镂空" : "默认放射区域将生成浮雕"} · 比例 ${(currentPatternScale() * 100).toFixed(0)}% · ${patternOffsetText()}。`;
         scheduleRebuild();
         return;
       }
@@ -1128,7 +1156,7 @@
       state.mask = { data, size };
       drawPatternPreview(data);
       updatePatternEditorControls();
-      const adjustment = `比例 ${(currentPatternScale() * 100).toFixed(0)}% · ${size}px · 平滑 ${currentPatternSmoothing()}`;
+      const adjustment = `比例 ${(currentPatternScale() * 100).toFixed(0)}% · ${patternOffsetText()} · ${size}px · 平滑 ${currentPatternSmoothing()}`;
       const islandText = state.solidIslands.length ? ` · ${state.solidIslands.length} 个孤岛待处理` : "";
       controls.patternStatus.textContent = `${currentMode() === "cut" ? "橙色区域将被切穿" : "橙色区域将生成浮雕"}${islandText} · ${adjustment}。`;
       if (rebuildModel) scheduleRebuild();
@@ -1136,14 +1164,20 @@
 
     function updatePatternEditorControls() {
       const editable = Boolean(state.image) && currentMode() === "cut" && state.patternView === "mask";
+      const movable = state.patternView === "mask" || Boolean(state.sourcePreview);
+      controls.movePattern.disabled = !movable;
       [controls.cutBrush, controls.smoothCutBrush, controls.solidBrush, controls.bridgeBrush].forEach((button) => { button.disabled = !editable; });
-      controls.brushSize.disabled = !editable;
+      controls.brushSizeRow.hidden = state.patternTool === "move";
+      controls.brushSize.disabled = !editable || state.patternTool === "move";
       controls.undoPattern.disabled = !state.patternUndo.length;
       controls.redoPattern.disabled = !state.patternRedo.length;
       controls.clearPatternEdits.disabled = !state.patternEdits.length;
+      controls.patternOffsetReadout.textContent = patternOffsetText();
+      controls.centerPattern.disabled = Math.hypot(state.patternOffsetX, state.patternOffsetY) < .05;
       controls.islandPanel.hidden = currentMode() !== "cut" || state.patternView !== "mask" || !state.solidIslands.length;
       controls.islandCounter.textContent = state.solidIslands.length ? `${state.selectedIsland + 1} / ${state.solidIslands.length}` : "0 / 0";
       controls.patternCanvasWrap.dataset.view = state.patternView;
+      controls.patternCanvasWrap.dataset.tool = state.patternTool;
       controls.brushSizeLabel.textContent = ["cut", "smoothCut"].includes(state.patternTool) ? "镂空宽度" : state.patternTool === "bridge" ? "桥宽" : "补实体宽度";
       $$('[data-pattern-view]').forEach((button) => button.classList.toggle("active", button.dataset.patternView === state.patternView));
       $$('[data-pattern-tool]').forEach((button) => {
@@ -1157,8 +1191,11 @@
       if (!state.image || state.patternView !== "mask" || currentMode() !== "cut") return null;
       const rect = controls.patternCanvas.getBoundingClientRect();
       const scale = currentPatternScale();
-      const sourceX = ((event.clientX - rect.left) / rect.width - (1 - scale) / 2) / scale;
-      const sourceY = ((event.clientY - rect.top) / rect.height - (1 - scale) / 2) / scale;
+      const availableSize = patternAvailableSize();
+      const offsetX = state.patternOffsetX / availableSize;
+      const offsetY = -state.patternOffsetY / availableSize;
+      const sourceX = ((event.clientX - rect.left) / rect.width - (1 - scale) / 2 - offsetX) / scale;
+      const sourceY = ((event.clientY - rect.top) / rect.height - (1 - scale) / 2 - offsetY) / scale;
       if (sourceX < 0 || sourceX > 1 || sourceY < 0 || sourceY > 1) return null;
       return { x:sourceX, y:sourceY };
     }
@@ -1406,8 +1443,8 @@
       const enabled = activeClipIndices(p).length;
       const strengthName = { easy:"容易拆装", balanced:"均衡", reinforced:"加强且可拆" }[p.strengthPreset];
       const fitName = { tight:"偏紧", standard:"标准", loose:"偏松" }[p.fitPreset];
-      const clipDimensions = `开口宽度 ${p.openingWidth} mm；径向宽度 ${p.contactLength} mm；根/末爪厚 ${p.legThickness}/${p.tipThickness} mm；边缘间隙 ${p.sideClearance} mm；单侧外勾 ${p.hookReach} mm；倒钩轴向高度 ${p.hookHeight} mm；导入坡度 ${p.insertionAngle.toFixed(1)}°；向内捏合片 ${p.releaseTabs ? "开启" : "关闭"}`;
-      const patternSettings = `比例 ${(p.patternScale * 100).toFixed(0)}%；采样 ${p.samplingResolution}px；轮廓平滑 ${p.patternSmoothing}；杂点清理 ${p.cleanup}；镂空闭合 ${p.closeStrength}；最小镂空 ${p.minHoleArea} mm²；镂空扩张 ${p.hollowExpansion} mm；手工编辑 ${state.patternEdits.length} 项；阈值 ${numberValue(controls.threshold)}；反色 ${controls.invertPattern.checked ? "开启" : "关闭"}`;
+      const clipDimensions = `开口宽度 ${p.openingWidth} mm；径向宽度 ${p.contactLength} mm；根/末爪厚 ${p.legThickness}/${p.tipThickness} mm；边缘间隙 ${p.sideClearance} mm；单侧外勾 ${p.hookReach} mm；自动倒钩轴向高度 ${p.hookHeight} mm；导入坡度 ${p.insertionAngle.toFixed(1)}°`;
+      const patternSettings = `比例 ${(p.patternScale * 100).toFixed(0)}%；位置 X ${p.patternOffsetX.toFixed(1)} / Y ${p.patternOffsetY.toFixed(1)} mm；采样 ${p.samplingResolution}px；轮廓平滑 ${p.patternSmoothing}；杂点清理 ${p.cleanup}；镂空闭合 ${p.closeStrength}；最小镂空 ${p.minHoleArea} mm²；镂空扩张 ${p.hollowExpansion} mm；手工编辑 ${state.patternEdits.length} 项；阈值 ${numberValue(controls.threshold)}；反色 ${controls.invertPattern.checked ? "开启" : "关闭"}`;
       const geometryCheck = state.geometryVerification ? `${state.geometryVerification.status}; components=${state.geometryVerification.componentCount}; invalidEdges=${state.geometryVerification.invalidEdges}` : "Unavailable";
       const model = `<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="zh-CN" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Title">婴儿车装饰轮毂盖 ${p.coverDiameter}mm</metadata><metadata name="Application">婴儿车轮毂盖生成器</metadata><metadata name="Description">非承力装饰件；${enabled} 组同开口向外双爪；${p.mode === "cut" ? "贯穿镂空" : "浅浮雕"}</metadata><metadata name="StrengthPreset">${strengthName}</metadata><metadata name="FitPreset">${fitName}</metadata><metadata name="ClipSettings">${state.customClipSettings ? "自定义" : "跟随预设"}</metadata><metadata name="ClipDimensions">${clipDimensions}</metadata><metadata name="PatternSettings">${patternSettings}</metadata><metadata name="EstimatedStrain">${p.estimatedStrain.toFixed(2)}%</metadata><metadata name="GeometryKernel">Manifold 3.5.1</metadata><metadata name="GeometryCheck">${geometryCheck}</metadata><resources><object id="1" type="model" name="${escapeXml(`轮毂盖-${enabled}组向外双爪`)}"><mesh><vertices>${vertexXml}</vertices><triangles>${faceXml}</triangles></mesh></object></resources><build><item objectid="1"/></build></model>`;
       const types = `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>`;
@@ -1462,12 +1499,13 @@
       controls.clipDetailStatus.textContent = "自定义";
       scheduleRebuild();
     }));
-    controls.releaseTabs.addEventListener("change", scheduleRebuild);
     controls.invertPattern.addEventListener("change", processImage);
     controls.imageInput.addEventListener("change", () => {
       const file = controls.imageInput.files?.[0]; if (!file) return;
       const image = new Image(); image.onload = () => {
         state.image = image;
+        state.patternOffsetX = 0;
+        state.patternOffsetY = 0;
         state.patternEdits = [];
         state.patternUndo = [];
         state.patternRedo = [];
@@ -1496,6 +1534,10 @@
     }));
     controls.undoPattern.addEventListener("click", undoPatternEdit);
     controls.redoPattern.addEventListener("click", redoPatternEdit);
+    controls.centerPattern.addEventListener("click", () => {
+      setPatternOffset(0, 0);
+      showToast("图案已恢复居中");
+    });
     controls.clearPatternEdits.addEventListener("click", () => {
       if (!state.patternEdits.length) return;
       recordPatternHistory();
@@ -1513,6 +1555,20 @@
     controls.deleteIsland.addEventListener("click", deleteSelectedIsland);
     controls.patternCanvas.addEventListener("pointerdown", (event) => {
       if (event.button !== 0) return;
+      if (state.patternTool === "move") {
+        if (controls.movePattern.disabled) return;
+        event.preventDefault();
+        state.patternPan = {
+          pointerId:event.pointerId,
+          clientX:event.clientX,
+          clientY:event.clientY,
+          offsetX:state.patternOffsetX,
+          offsetY:state.patternOffsetY
+        };
+        controls.patternCanvasWrap.classList.add("moving");
+        controls.patternCanvas.setPointerCapture?.(event.pointerId);
+        return;
+      }
       const point = patternPointFromEvent(event);
       if (!point) return;
       event.preventDefault();
@@ -1522,6 +1578,14 @@
       rebuildEditedMask(false);
     });
     controls.patternCanvas.addEventListener("pointermove", (event) => {
+      if (state.patternPan) {
+        const rect = controls.patternCanvas.getBoundingClientRect();
+        const availableSize = patternAvailableSize();
+        const offsetX = state.patternPan.offsetX + (event.clientX - state.patternPan.clientX) / rect.width * availableSize;
+        const offsetY = state.patternPan.offsetY - (event.clientY - state.patternPan.clientY) / rect.height * availableSize;
+        setPatternOffset(offsetX, offsetY);
+        return;
+      }
       if (!state.patternDraft) return;
       const point = patternPointFromEvent(event);
       if (!point) return;
@@ -1529,6 +1593,13 @@
       rebuildEditedMask(false);
     });
     const finishPatternStroke = (event) => {
+      if (state.patternPan) {
+        state.patternPan = null;
+        controls.patternCanvasWrap.classList.remove("moving");
+        controls.patternCanvas.releasePointerCapture?.(event.pointerId);
+        scheduleRebuild();
+        return;
+      }
       if (!state.patternDraft) return;
       const point = patternPointFromEvent(event);
       if (point) appendPatternPoint(state.patternDraft, point);
@@ -1540,7 +1611,12 @@
       rebuildEditedMask(true);
     };
     controls.patternCanvas.addEventListener("pointerup", finishPatternStroke);
-    controls.patternCanvas.addEventListener("pointercancel", () => { state.patternDraft = null; rebuildEditedMask(false); });
+    controls.patternCanvas.addEventListener("pointercancel", () => {
+      state.patternPan = null;
+      state.patternDraft = null;
+      controls.patternCanvasWrap.classList.remove("moving");
+      rebuildEditedMask(false);
+    });
     $$(".view-button").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
     controls.resetView.addEventListener("click", () => setView("perspective"));
     controls.previewCanvas.addEventListener("pointerdown", (event) => { state.dragging = true; state.pointer = { x:event.clientX, y:event.clientY }; controls.previewCanvas.setPointerCapture(event.pointerId); });
