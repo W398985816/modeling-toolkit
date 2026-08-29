@@ -31,7 +31,9 @@ export function deriveStructure(raw, custom = null) {
   }[raw.fitPreset];
   const automatic = {
     ...raw,
-    coverThickness:clamp(raw.coverDiameter * .012, 2, 3.2),
+    coverThickness:clamp(raw.coverThickness ?? raw.coverDiameter * .012, 1.2, 6),
+    skirtHeight:clamp(raw.skirtHeight ?? 0, 0, 30),
+    skirtThickness:clamp(raw.skirtThickness ?? 2, 1.2, 8),
     outerRingWidth:clamp(raw.coverDiameter * .04, 6, 14),
     contactLength:clamp(raw.spokeBackDepth * strength.contactRatio, strength.contactMin, strength.contactMax),
     legThickness:clamp(raw.spokeBackDepth / strength.thicknessDivisor, strength.thicknessMin, strength.thicknessMax),
@@ -46,8 +48,8 @@ export function deriveStructure(raw, custom = null) {
   result.rootFlare = clamp(result.legThickness * strength.flareRatio, 1, 2.6);
   result.tipThickness = Math.max(1.2, result.legThickness * .72);
   result.tipWidth = Math.max(8, result.contactLength * .82);
-  // 导入段按 45° 上限自动计算，末端再保留至少两层打印高度作为承力平台。
-  result.hookLandHeight = Math.max(result.layerHeight * 2, result.nozzleWidth);
+  // 导入段按 45° 上限自动计算；背面留出圆角后的承力肩，避免纯圆弧失去防脱止挡。
+  result.hookLandHeight = Math.max(result.layerHeight * 3, result.nozzleWidth * 1.5, Math.min(1, result.legThickness * .35));
   result.insertionRampHeight = result.hookReach + result.sideClearance;
   result.hookHeight = result.insertionRampHeight + result.hookLandHeight;
   result.flexPerJaw = Math.max(0, result.hookReach);
@@ -80,6 +82,10 @@ export function validateDesign(p, activeIndices, patternReport = null) {
   if (m.enabled < 3) errors.push("至少需要保留 3 组双爪卡扣");
   if (p.clipRadius - p.contactLength / 2 - p.rootFlare < 3) errors.push("卡扣安装半径过小，加强根座已越过盖板中心");
   if (p.clipRadius + p.contactLength / 2 + p.rootFlare + 2 > m.coverRadius) errors.push("卡扣加强根座超出盖板外缘");
+  if (p.coverThickness < 1.6) warnings.push("盖板厚度低于 1.6 mm，建议先验证卡爪根部刚度");
+  if (p.skirtHeight > 0 && p.skirtThickness >= m.coverRadius - 2) errors.push("裙边厚度过大，内径不足");
+  if (p.skirtHeight > 0 && p.skirtHeight / p.skirtThickness > 15) warnings.push("裙边较高且较薄，注意打印翘曲和振动摆动");
+  if (p.skirtHeight > p.spokeBackDepth) warnings.push("裙边高度超过卡扣总深度，请确认不会与轮毂或车轮干涉");
   if (m.availableArc < 3) errors.push("相邻卡爪间距小于 3 mm");
   if (p.spokeBackDepth <= p.rootHeight + 2) errors.push("卡扣总深度过短，无法保留根部渐变区和弹性直段");
   if (p.contactLength < 8) errors.push("卡爪径向宽度不能小于 8 mm");
@@ -199,11 +205,31 @@ function buildHook(wasm, p, angle, side) {
   const hookOuter = edge + p.hookReach;
   const backFace = -p.spokeBackDepth;
   const leadingFace = backFace - p.hookHeight;
+  const rampEnd = leadingFace + p.insertionRampHeight;
+  const tipRadius = Math.min(.3, p.hookLandHeight * .45, p.hookReach * .35);
+  const ramp = [];
+  // 三次贝塞尔逼近圆滑的 45° 导入：起点与爪片相切，终点与承力肩相切。
+  for (let step = 1; step <= 6; step += 1) {
+    const t = step / 6, reverse = 1 - t;
+    ramp.push({
+      t:reverse ** 3 * armOuter + 3 * reverse ** 2 * t * (armOuter + (hookOuter - armOuter) * .62) + 3 * reverse * t ** 2 * hookOuter + t ** 3 * hookOuter,
+      z:reverse ** 3 * leadingFace + 3 * reverse ** 2 * t * leadingFace + 3 * reverse * t ** 2 * (rampEnd - (rampEnd - leadingFace) * .38) + t ** 3 * rampEnd
+    });
+  }
+  const roundedShoulder = [];
+  for (let step = 1; step <= 4; step += 1) {
+    const theta = Math.PI * step / 8;
+    roundedShoulder.push({
+      t:hookOuter - tipRadius + tipRadius * Math.cos(theta),
+      z:backFace - tipRadius + tipRadius * Math.sin(theta)
+    });
+  }
   const profile = [
     { t:armInner, z:leadingFace },
     { t:armOuter, z:leadingFace },
-    { t:hookOuter, z:leadingFace + p.insertionRampHeight },
-    { t:hookOuter, z:backFace },
+    ...ramp,
+    { t:hookOuter, z:backFace - tipRadius },
+    ...roundedShoulder,
     { t:armInner, z:backFace }
   ];
   const orientedProfile = side > 0 ? profile : profile.map((point) => ({ t:-point.t, z:point.z })).reverse();
@@ -327,6 +353,12 @@ function vectorPattern(wasm, p, mask) {
     processed = opened.simplify(Math.max(.035, pixelSize * .12));
     opened.delete();
   }
+  const rotation = Number.isFinite(p.patternRotation) ? p.patternRotation : 0;
+  if (rotation) {
+    const rotated = processed.rotate(rotation);
+    processed.delete();
+    processed = rotated;
+  }
   const offsetX = Number.isFinite(p.patternOffsetX) ? p.patternOffsetX : 0;
   const offsetY = Number.isFinite(p.patternOffsetY) ? p.patternOffsetY : 0;
   if (!offsetX && !offsetY) return processed;
@@ -390,6 +422,24 @@ function buildCoverSection(wasm, p, activeIndices, mask) {
   dispose(inner, ring, protection, protectionGuard, anchors);
   if (p.mode === "cut") patternWithoutRoots.delete();
   return { bodySection, reliefSection, report };
+}
+
+function buildOuterSkirt(wasm, p) {
+  if (p.skirtHeight <= 0) return null;
+  const { CrossSection } = wasm;
+  const radius = p.coverDiameter / 2;
+  const segments = clamp(Math.ceil(Math.PI * 2 * radius / 1.5), 160, 420);
+  const outer = CrossSection.circle(radius, segments);
+  const inner = CrossSection.circle(Math.max(.5, radius - p.skirtThickness), segments);
+  const ring = outer.subtract(inner);
+  outer.delete();
+  inner.delete();
+  // 向盖板内部重叠 0.1 mm，保证裙边与盖板布尔合并为一个连续实体。
+  const rawSkirt = ring.extrude(p.skirtHeight + .1);
+  ring.delete();
+  const skirt = rawSkirt.translate([0,0,-p.skirtHeight]);
+  rawSkirt.delete();
+  return skirt;
 }
 
 function verifySolid(solid) {
@@ -503,6 +553,12 @@ export async function buildHubcapGeometry(p, activeIndices, mask) {
     reliefSection.delete();
     const united = cover.add(relief);
     dispose(cover, relief);
+    cover = united;
+  }
+  const skirt = buildOuterSkirt(wasm, p);
+  if (skirt) {
+    const united = cover.add(skirt);
+    dispose(cover, skirt);
     cover = united;
   }
   const clips = buildClipSolids(wasm, p, activeIndices);

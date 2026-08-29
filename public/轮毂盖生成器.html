@@ -94,6 +94,39 @@
       font-size: 12px;
       line-height: 1.6;
     }
+    .config-store {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 14px;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      background: rgba(255, 250, 240, 0.7);
+    }
+    .config-store-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    .config-store-head strong { font-size: 12px; }
+    .config-store-head span { color: var(--teal); font: 9px var(--mono); letter-spacing: .08em; }
+    .config-save-row, .config-store-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+    .config-store input, .config-store select {
+      min-width: 0;
+      height: 31px;
+      border: 1px solid var(--line);
+      border-radius: 0;
+      padding: 0 8px;
+      color: var(--ink);
+      background: #fffdf8;
+      font: 10px var(--mono);
+    }
+    .config-store button {
+      min-height: 31px;
+      border: 1px solid var(--line);
+      color: var(--ink);
+      background: #fffdf8;
+      cursor: pointer;
+      font: 600 10px var(--mono);
+    }
+    .config-save-row button { border-color: var(--teal); color: white; background: var(--teal); }
+    .config-store button:disabled { cursor: not-allowed; opacity: .42; }
+    .config-store small { color: var(--ink-soft); font-size: 9px; line-height: 1.45; }
     .section {
       margin-bottom: 12px;
       border: 1px solid var(--line);
@@ -136,17 +169,30 @@
     .position-readout strong { color: var(--teal); font: 600 13px var(--mono); }
     .diagram {
       position: relative;
-      height: 112px;
+      aspect-ratio: 2 / 1;
       overflow: hidden;
       border: 1px solid var(--line);
-      background: #e9e5da;
+      border-radius: 4px;
+      background: linear-gradient(145deg, #f7f3e9 0%, #e9e5da 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
     }
     .diagram svg { width: 100%; height: 100%; }
-    .diagram text { fill: var(--ink-soft); font: 8px var(--mono); }
-    .diagram .measure { stroke: var(--orange); stroke-width: 1.3; }
-    .diagram .part { fill: #fff8eb; stroke: var(--ink); stroke-width: 1.2; }
-    .diagram .spoke { fill: rgba(46,119,113,.18); stroke: var(--teal); stroke-width: 1.2; }
-    .diagram .hook { fill: var(--orange-soft); stroke: var(--orange); stroke-width: 1.2; }
+    .diagram text { font-family: var(--mono); }
+    .diagram .diagram-grid { fill: url(#fit-grid); opacity: .55; }
+    .diagram .cover-shell { fill: #242824; stroke: #111511; stroke-width: 1.2; }
+    .diagram .cover-face { fill: #fff9ec; opacity: .16; }
+    .diagram .spoke-body { fill: url(#spoke-fill); stroke: #286d68; stroke-width: 1.2; }
+    .diagram .spoke-edge { stroke: #164d49; stroke-width: 3; }
+    .diagram .claw-body { fill: url(#claw-fill); stroke: #c84e23; stroke-width: 1.2; stroke-linejoin: round; }
+    .diagram .claw-highlight { fill: none; stroke: rgba(255,255,255,.68); stroke-width: 1; }
+    .diagram .measure { fill: none; stroke: var(--orange); stroke-width: 1.25; }
+    .diagram .guide { fill: none; stroke: #a69d8f; stroke-width: 1; stroke-dasharray: 3 3; }
+    .diagram .motion { fill: none; stroke: var(--orange); stroke-width: 1.35; }
+    .diagram .measure-label { fill: #b84b26; font-size: 8.5px; font-weight: 700; letter-spacing: .05em; }
+    .diagram .part-label { fill: #676c66; font-size: 7.5px; letter-spacing: .04em; }
+    .diagram .cover-label { fill: #f7f2e8; font-size: 7.5px; font-weight: 700; letter-spacing: .08em; }
+    .diagram .section-label { fill: #fffaf0; font-size: 7px; font-weight: 700; letter-spacing: .12em; }
+    .diagram .opening-label { fill: #294e4b; font-size: 8px; font-weight: 700; letter-spacing: .04em; }
     .clip-group-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
     .clip-group-button {
       min-height: 34px;
@@ -390,12 +436,20 @@
   <main class="app-main">
     <aside class="sidebar" aria-label="轮毂盖参数">
       <div class="notice"><strong>非承力装饰件</strong><br>不得替代原厂轮毂、轴承、制动或锁止结构。打印后必须完成拉脱、振动与车轮干涉检查。</div>
+      <div class="config-store">
+        <div class="config-store-head"><strong>本地配置</strong><span id="configStatus">尚未保存</span></div>
+        <div class="config-save-row"><input id="configName" type="text" maxlength="32" placeholder="配置名称，例如：前轮试装"><button id="saveConfig" type="button">保存</button></div>
+        <div class="config-store-actions"><select id="configList" aria-label="已保存配置" disabled><option>暂无已保存配置</option></select><button id="loadConfig" type="button" disabled>载入</button></div>
+        <small>可保存多组；同名会更新该组。仅保留参数，不保存上传图案、笔刷编辑或图案位置与角度。</small>
+      </div>
 
       <section class="section">
         <div class="section-heading"><strong>盖板尺寸</strong><span>01 / BODY</span></div>
         <div class="section-body">
           <div class="control"><label for="coverDiameter">轮毂盖外径</label><input id="coverDiameter" type="number" min="80" max="320" step="1" value="200"><input data-pair="coverDiameter" type="range" min="80" max="320" step="1" value="200"></div>
-          <p class="control-note">盖板厚度和外圈保留宽度会根据外径自动计算；图案不会切入外圈，也不会切断卡爪根座到外圈的实体桥。</p>
+          <div class="control"><label for="coverThickness">盖板厚度</label><input id="coverThickness" type="number" min="1.2" max="6" step="0.1" value="2.4"><input data-pair="coverThickness" type="range" min="1.2" max="6" step="0.1" value="2.4"><p class="control-note">默认 2.4 mm；低于 1.6 mm 时应先打印样件确认根部刚度。</p></div>
+          <div class="control"><label for="skirtHeight">外圈裙边高度</label><input id="skirtHeight" type="number" min="0" max="30" step="0.5" value="0"><input data-pair="skirtHeight" type="range" min="0" max="30" step="0.5" value="0"><p class="control-note">从盖板背面向后延伸；设为 0 mm 时不生成裙边。</p></div>
+          <div class="control"><label for="skirtThickness">外圈裙边厚度</label><input id="skirtThickness" type="number" min="1.2" max="8" step="0.1" value="2"><input data-pair="skirtThickness" type="range" min="1.2" max="8" step="0.1" value="2"><p class="control-note">厚度向内增加，盖板外径不变。图案不会切入外圈，也不会切断卡爪根座到外圈的实体桥。</p></div>
         </div>
       </section>
 
@@ -403,18 +457,57 @@
         <div class="section-heading"><strong>轮辐开口与双爪</strong><span>02 / FIT</span></div>
         <div class="section-body">
           <div class="diagram" aria-label="双爪穿过同一轮辐开口并向外卡边的测量示意">
-            <svg viewBox="0 0 320 112" role="img">
-              <path class="part" d="M34 14h252v13H34z"/>
-              <path class="spoke" d="M54 47h60v38H54zM206 47h60v38h-60z"/>
-              <path class="part" d="M127 27h12v64h-12zM181 27h12v64h-12z"/>
-              <path class="hook" d="M103 80h36v11h-46zM181 80h36l10 11h-46z"/>
-              <path class="measure" d="M32 27v64m-5-64h10m-10 64h10"/>
-              <path class="measure" d="M114 101h92m-92-5v10m92-10v10"/>
-              <text x="4" y="64">总深度</text>
-              <text x="160" y="108" text-anchor="middle">开口宽度</text>
-              <text x="160" y="42" text-anchor="middle">两爪从同一开口穿入</text>
-              <text x="160" y="76" text-anchor="middle">中间为空</text>
-              <text x="160" y="17" text-anchor="middle">盖板背面</text>
+            <svg viewBox="0 0 360 180" role="img" aria-labelledby="fit-diagram-title fit-diagram-desc">
+              <title id="fit-diagram-title">双爪穿过同一轮辐开口并向外卡住背面边缘</title>
+              <desc id="fit-diagram-desc">从轮毂盖背面到轮辐背面的总深度，以及左右轮辐之间开口宽度的测量方法。</desc>
+              <defs>
+                <pattern id="fit-grid" width="12" height="12" patternUnits="userSpaceOnUse">
+                  <path d="M12 0H0V12" fill="none" stroke="#cfc7b8" stroke-width=".55"/>
+                </pattern>
+                <linearGradient id="spoke-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#b9d5cf"/>
+                  <stop offset="1" stop-color="#77aaa3"/>
+                </linearGradient>
+                <linearGradient id="claw-fill" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#ff9a67"/>
+                  <stop offset="1" stop-color="#e85e31"/>
+                </linearGradient>
+                <marker id="measure-arrow" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                  <path d="M8 0 0 4l8 4z" fill="#ec6a3a"/>
+                </marker>
+                <marker id="motion-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+                  <path d="M0 0 8 4 0 8z" fill="#ec6a3a"/>
+                </marker>
+              </defs>
+              <rect width="360" height="180" fill="#f4f0e7"/>
+              <rect class="diagram-grid" width="360" height="180"/>
+
+              <rect x="43" y="22" width="274" height="22" rx="3" class="cover-shell"/>
+              <path class="cover-face" d="M48 26h264v5H48z"/>
+              <rect x="52" y="28" width="43" height="11" rx="5.5" fill="#ec6a3a"/>
+              <text x="73.5" y="35.8" text-anchor="middle" class="section-label">装配剖面</text>
+              <text x="270" y="36" text-anchor="middle" class="cover-label">盖板背面</text>
+
+              <path class="spoke-body" d="M35 72h91v54H35zM234 72h91v54h-91z"/>
+              <path class="spoke-edge" d="M126 72v54M234 72v54"/>
+              <text x="80.5" y="96" text-anchor="middle" class="part-label">左轮辐</text>
+              <text x="279.5" y="96" text-anchor="middle" class="part-label">右轮辐</text>
+
+              <path class="claw-body" d="M143 44h16v84h-27l-13 12h40V44z"/>
+              <path class="claw-body" d="M201 44h16v84h11l13 12h-40V44z"/>
+              <path class="claw-highlight" d="M147 48v76M205 48v76"/>
+              <path class="motion" d="M143 116h-15" marker-end="url(#motion-arrow)"/>
+              <path class="motion" d="M217 116h15" marker-end="url(#motion-arrow)"/>
+              <text x="180" y="84" text-anchor="middle" class="opening-label">两爪共用一个开口</text>
+              <text x="180" y="96" text-anchor="middle" class="part-label">中间保持完全空开</text>
+              <text x="116" y="111" text-anchor="end" class="measure-label">向外挂边</text>
+              <text x="244" y="111" class="measure-label">向外挂边</text>
+
+              <path class="guide" d="M43 44H18M35 126H18M126 126v31M234 126v31"/>
+              <path class="measure" d="M19 48v74" marker-start="url(#measure-arrow)" marker-end="url(#measure-arrow)"/>
+              <text x="10" y="86" text-anchor="middle" transform="rotate(-90 10 86)" class="measure-label">卡扣总深度</text>
+              <path class="measure" d="M130 157h100" marker-start="url(#measure-arrow)" marker-end="url(#measure-arrow)"/>
+              <text x="180" y="172" text-anchor="middle" class="measure-label">轮辐开口宽度</text>
             </svg>
           </div>
           <div class="control"><label for="clipRadius">中心到卡扣距离</label><input id="clipRadius" type="number" min="20" max="150" step="0.5" value="70"><input data-pair="clipRadius" type="range" min="20" max="150" step="0.5" value="70"></div>
@@ -453,7 +546,7 @@
       <details class="section">
         <summary>卡爪微调 <span id="clipDetailStatus" style="float:none;margin-left:8px;color:var(--teal);font:9px var(--mono)">跟随预设</span></summary>
         <div class="section-body">
-          <p class="control-note">预设会自动填入安全起点。两爪位于同一个开口内，倒钩末端相互背离并向外挂住左右背面边缘；修改任一可调尺寸后进入自定义状态。倒钩轴向高度与导入坡面由外伸量和间隙自动计算。</p>
+          <p class="control-note">预设会自动填入安全起点。两爪位于同一个开口内，倒钩末端相互背离并向外挂住左右背面边缘；修改任一可调尺寸后进入自定义状态。倒钩采用连续圆弧导入与圆角承力肩，轴向高度由外伸量和间隙自动计算。</p>
           <div class="control"><label for="contactLength">爪片径向宽度</label><input id="contactLength" data-clip-custom type="number" min="8" max="30" step="0.5" value="14"></div>
           <div class="control"><label for="legThickness">爪片厚度</label><input id="legThickness" data-clip-custom type="number" min="1.2" max="3.5" step="0.1" value="2"></div>
           <div class="control"><label for="sideClearance">单侧装配间隙</label><input id="sideClearance" data-clip-custom type="number" min="0.1" max="1" step="0.05" value="0.35"></div>
@@ -493,8 +586,8 @@
                 <button class="pattern-tool" id="bridgeBrush" type="button" data-pattern-tool="bridge" aria-pressed="false">连接桥</button>
               </div>
               <label class="editor-size-row" id="brushSizeRow"><span id="brushSizeLabel">笔触宽度</span><input id="brushSize" type="number" min="0.4" max="12" step="0.1" value="1.2"><input data-pair="brushSize" type="range" min="0.4" max="12" step="0.1" value="1.2"></label>
-              <div class="pattern-position-row"><span>图案位置</span><strong id="patternOffsetReadout">X 0.0 · Y 0.0 mm</strong><button class="pattern-action" id="centerPattern" type="button" disabled>恢复居中</button></div>
-              <p class="control-note">选择“移动图案”后在画布中拖动；X 向右为正，Y 向上为正。</p>
+              <div class="pattern-position-row"><span>图案位置与角度</span><strong id="patternOffsetReadout">X 0.0 · Y 0.0 mm · 旋转 0°</strong><button class="pattern-action" id="centerPattern" type="button" disabled>复位</button></div>
+              <p class="control-note">选择“移动图案”后在画布中拖动；X 向右为正，Y 向上为正，旋转正值为逆时针。</p>
               <div class="pattern-actions">
                 <button class="pattern-action" id="undoPattern" type="button" disabled>撤销</button>
                 <button class="pattern-action" id="redoPattern" type="button" disabled>重做</button>
@@ -512,6 +605,7 @@
               </div>
             </div>
           </div>
+          <div class="control"><label for="patternRotation">图案旋转</label><input id="patternRotation" type="number" min="-180" max="180" step="1" value="0"><input data-pair="patternRotation" type="range" min="-180" max="180" step="1" value="0"><p class="control-note">围绕图案自身中心旋转，可配合移动和缩放避开背面的卡爪根部。</p></div>
           <div class="control"><label for="patternScale">图案比例</label><input id="patternScale" type="number" min="30" max="100" step="1" value="100"><input data-pair="patternScale" type="range" min="30" max="100" step="1" value="100"><p class="control-note">相对于外圈以内可用图案区域的占比；围绕当前图案中心缩放，不影响外圈和卡爪根部保护区。</p></div>
           <details class="section" style="margin:0">
             <summary>图案微调</summary>
@@ -583,13 +677,23 @@
 
     const $ = (selector) => document.querySelector(selector);
     const $$ = (selector) => [...document.querySelectorAll(selector)];
+    const configStorageKey = "hubcap-generator-configs-v2";
+    const legacyConfigStorageKey = "hubcap-generator-config-v1";
+    const savedControlIds = [
+      "coverDiameter", "coverThickness", "skirtHeight", "skirtThickness",
+      "clipRadius", "clipCount", "startAngle", "openingWidth", "spokeBackDepth",
+      "contactLength", "legThickness", "sideClearance", "hookReach", "rootHeight",
+      "patternScale", "threshold", "samplingResolution", "cleanup", "closeStrength",
+      "minHoleArea", "hollowExpansion", "smoothing", "reliefHeight", "brushSize"
+    ];
     const controls = {
-      coverDiameter: $("#coverDiameter"),
+      configStatus: $("#configStatus"), configName: $("#configName"), configList: $("#configList"), saveConfig: $("#saveConfig"), loadConfig: $("#loadConfig"),
+      coverDiameter: $("#coverDiameter"), coverThickness: $("#coverThickness"), skirtHeight: $("#skirtHeight"), skirtThickness: $("#skirtThickness"),
       clipRadius: $("#clipRadius"), clipCount: $("#clipCount"), startAngle: $("#startAngle"), openingWidth: $("#openingWidth"),
       spokeBackDepth: $("#spokeBackDepth"),
       contactLength: $("#contactLength"), legThickness: $("#legThickness"), sideClearance: $("#sideClearance"),
       hookReach: $("#hookReach"), rootHeight: $("#rootHeight"), clipDetailStatus: $("#clipDetailStatus"),
-      patternScale: $("#patternScale"), threshold: $("#threshold"), samplingResolution: $("#samplingResolution"), cleanup: $("#cleanup"), closeStrength: $("#closeStrength"), minHoleArea: $("#minHoleArea"), hollowExpansion: $("#hollowExpansion"), smoothing: $("#smoothing"), invertPattern: $("#invertPattern"), reliefHeight: $("#reliefHeight"),
+      patternRotation: $("#patternRotation"), patternScale: $("#patternScale"), threshold: $("#threshold"), samplingResolution: $("#samplingResolution"), cleanup: $("#cleanup"), closeStrength: $("#closeStrength"), minHoleArea: $("#minHoleArea"), hollowExpansion: $("#hollowExpansion"), smoothing: $("#smoothing"), invertPattern: $("#invertPattern"), reliefHeight: $("#reliefHeight"),
       imageInput: $("#imageInput"), uploadZone: $("#uploadZone"), uploadName: $("#uploadName"), patternCanvas: $("#patternCanvas"),
       patternCanvasWrap: $("#patternCanvasWrap"), patternEditor: $("#patternEditor"), patternStatus: $("#patternStatus"), reliefControl: $("#reliefControl"), previewCanvas: $("#previewCanvas"),
       movePattern: $("#movePattern"), cutBrush: $("#cutBrush"), smoothCutBrush: $("#smoothCutBrush"), solidBrush: $("#solidBrush"), bridgeBrush: $("#bridgeBrush"), brushSize: $("#brushSize"), brushSizeLabel: $("#brushSizeLabel"), brushSizeRow: $("#brushSizeRow"),
@@ -619,6 +723,7 @@
       patternDraft: null,
       patternOffsetX: 0,
       patternOffsetY: 0,
+      patternRotation: 0,
       patternPan: null,
       mesh: null,
       exportTriangles: [],
@@ -650,6 +755,141 @@
     function currentPatternScale() { return Math.max(.3, Math.min(1, numberValue(controls.patternScale) / 100)); }
     function currentPatternSmoothing() { return Math.max(0, Math.min(8, Math.round(numberValue(controls.smoothing)))); }
 
+    function readConfigStore() {
+      try {
+        const stored = localStorage.getItem(configStorageKey);
+        if (stored) {
+          const store = JSON.parse(stored);
+          if (store?.version === 2 && Array.isArray(store.configs)) return store;
+        }
+        const legacy = localStorage.getItem(legacyConfigStorageKey);
+        if (legacy) {
+          const config = JSON.parse(legacy);
+          if (config?.version === 1 && config.values) {
+            return { version:2, configs:[{ ...config, id:"legacy-v1", name:"原有配置" }] };
+          }
+        }
+      } catch {
+        // 本地存储被清理或不可用时，按空配置处理。
+      }
+      return { version:2, configs:[] };
+    }
+
+    function selectedSavedConfig(store = readConfigStore()) {
+      return store.configs.find((config) => config.id === controls.configList.value) || null;
+    }
+
+    function updateConfigStore(preferredId = controls.configList.value) {
+      const store = readConfigStore();
+      controls.configList.replaceChildren();
+      if (!store.configs.length) {
+        controls.configList.append(new Option("暂无已保存配置", ""));
+        controls.configList.disabled = true;
+        controls.loadConfig.disabled = true;
+        controls.configStatus.textContent = "尚未保存";
+        return;
+      }
+      store.configs.forEach((config) => {
+        const savedAt = new Date(config.savedAt);
+        const time = Number.isNaN(savedAt.getTime()) ? "" : ` · ${savedAt.toLocaleString("zh-CN", { month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" })}`;
+        controls.configList.append(new Option(`${config.name}${time}`, config.id));
+      });
+      controls.configList.disabled = false;
+      controls.configList.value = store.configs.some((config) => config.id === preferredId) ? preferredId : store.configs[0].id;
+      controls.loadConfig.disabled = false;
+      controls.configStatus.textContent = `已保存 ${store.configs.length} 组`;
+    }
+
+    function saveConfig() {
+      const name = controls.configName.value.trim();
+      if (!name) return showToast("请先输入配置名称");
+      const values = Object.fromEntries(savedControlIds.map((id) => [id, $(`#${id}`).value]));
+      const store = readConfigStore();
+      const previous = store.configs.find((config) => config.name === name);
+      const config = {
+        id: previous?.id || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+        name,
+        savedAt: Date.now(),
+        values,
+        radios: {
+          strengthPreset:selectedPreset("strengthPreset"),
+          fitPreset:selectedPreset("fitPreset"),
+          patternMode:currentMode()
+        },
+        invertPattern: controls.invertPattern.checked,
+        customClipSettings: state.customClipSettings,
+        activeClipGroups: [...state.activeClipGroups]
+      };
+      try {
+        if (previous) store.configs[store.configs.indexOf(previous)] = config;
+        else store.configs.push(config);
+        localStorage.setItem(configStorageKey, JSON.stringify(store));
+        updateConfigStore(config.id);
+        showToast(`已保存“${name}”；未保存图案`);
+      } catch {
+        showToast("浏览器无法保存本地参数");
+      }
+    }
+
+    function restoreSavedValue(id, value) {
+      const control = $(`#${id}`);
+      if (!control || value === undefined) return;
+      const numericValue = Number(value);
+      if (!Number.isFinite(numericValue)) return;
+      const minimum = Number(control.min), maximum = Number(control.max);
+      const clamped = Math.max(Number.isFinite(minimum) ? minimum : numericValue, Math.min(Number.isFinite(maximum) ? maximum : numericValue, numericValue));
+      control.value = String(clamped);
+      const pairedRange = $(`[data-pair="${id}"]`);
+      if (pairedRange) pairedRange.value = control.value;
+    }
+
+    function clearSavedPattern() {
+      state.image = null;
+      state.sourcePreview = null;
+      state.baseMask = null;
+      state.mask = null;
+      state.solidIslands = [];
+      state.exteriorSolid = null;
+      state.selectedIsland = 0;
+      state.patternEdits = [];
+      state.patternUndo = [];
+      state.patternRedo = [];
+      state.patternDraft = null;
+      state.patternOffsetX = 0;
+      state.patternOffsetY = 0;
+      state.patternRotation = 0;
+      state.patternPan = null;
+      state.patternTool = "cut";
+      state.patternView = "mask";
+      controls.imageInput.value = "";
+      controls.patternRotation.value = "0";
+      $('[data-pair="patternRotation"]').value = "0";
+      controls.uploadName.textContent = "可选；图片始终只在本机处理";
+    }
+
+    function loadConfig() {
+      const config = selectedSavedConfig();
+      if (!config) return showToast("当前浏览器没有已保存参数");
+      savedControlIds.forEach((id) => restoreSavedValue(id, config.values[id]));
+      Object.entries(config.radios || {}).forEach(([name, value]) => {
+        const input = $(`input[name="${name}"][value="${value}"]`);
+        if (input) input.checked = true;
+      });
+      controls.invertPattern.checked = Boolean(config.invertPattern);
+      resetClipGroups(numberValue(controls.clipCount));
+      const savedGroups = Array.isArray(config.activeClipGroups) ? config.activeClipGroups : [];
+      state.activeClipGroups = state.activeClipGroups.map((_, index) => savedGroups[index] !== false);
+      if (state.activeClipGroups.filter(Boolean).length < 3) resetClipGroups(numberValue(controls.clipCount));
+      state.customClipSettings = Boolean(config.customClipSettings);
+      controls.clipDetailStatus.textContent = state.customClipSettings ? "自定义" : "跟随预设";
+      controls.reliefControl.hidden = currentMode() !== "relief";
+      clearSavedPattern();
+      processImage();
+      controls.configName.value = config.name;
+      updateConfigStore(config.id);
+      showToast(`已载入“${config.name}”；图案未载入`);
+    }
+
     function params() {
       const custom = state.customClipSettings ? {
         contactLength:numberValue(controls.contactLength),
@@ -660,6 +900,9 @@
       } : null;
       return deriveStructure({
         coverDiameter:numberValue(controls.coverDiameter),
+        coverThickness:numberValue(controls.coverThickness),
+        skirtHeight:numberValue(controls.skirtHeight),
+        skirtThickness:numberValue(controls.skirtThickness),
         clipRadius:numberValue(controls.clipRadius),
         clipCount:Math.round(numberValue(controls.clipCount)),
         startAngle:numberValue(controls.startAngle) * Math.PI / 180,
@@ -670,6 +913,7 @@
         patternScale:currentPatternScale(),
         patternOffsetX:state.patternOffsetX,
         patternOffsetY:state.patternOffsetY,
+        patternRotation:state.patternRotation,
         patternSmoothing:currentPatternSmoothing(),
         samplingResolution:Math.round(numberValue(controls.samplingResolution)),
         cleanup:Math.round(numberValue(controls.cleanup)),
@@ -710,19 +954,8 @@
       state.geometryVerification = null;
       state.validation = validateDesign(p, activeIndices);
       updateReadouts(p);
-      if (!state.validation.valid) {
-        state.geometryBuilding = false;
-        state.exportTriangles = [];
-        state.exportMesh = null;
-        state.referenceTriangles = [];
-        state.bodyVertexCount = 0;
-        state.mesh = makeRenderData([]);
-        updateReadouts(p);
-        uploadMesh();
-        requestRender();
-        return;
-      }
       try {
+        // 尺寸安全错误只阻止导出；保留预览，便于观察倒钩与开口边缘的相对位置。
         const geometry = await buildHubcapGeometry(p, activeIndices, state.mask);
         if (revision !== state.buildRevision) return;
         state.geometryReport = geometry.report;
@@ -766,10 +999,12 @@
       controls.activeClipCount.textContent = `${m.enabled} / ${p.clipCount} 组`;
       controls.jawOpening.textContent = `${m.jawOuterSpan.toFixed(2)} mm`;
       controls.clipStrain.textContent = `${p.estimatedStrain.toFixed(2)}%`;
-      controls.autoDimensions.textContent = `板 ${p.coverThickness.toFixed(1)} · 圈 ${p.outerRingWidth.toFixed(1)} · 爪根/末 ${p.legThickness.toFixed(1)}/${p.tipThickness.toFixed(1)} · 外勾 ${p.hookReach.toFixed(2)} · 钩高 ${p.hookHeight.toFixed(2)} · 坡度 ${p.insertionAngle.toFixed(0)}°`;
+      const skirtText = p.skirtHeight > 0 ? `裙边 ${p.skirtHeight.toFixed(1)} × ${p.skirtThickness.toFixed(1)}` : "无裙边";
+      controls.autoDimensions.textContent = `板 ${p.coverThickness.toFixed(1)} · ${skirtText} · 圈 ${p.outerRingWidth.toFixed(1)} · 爪根/末 ${p.legThickness.toFixed(1)}/${p.tipThickness.toFixed(1)} · 外勾 ${p.hookReach.toFixed(2)} · 钩高 ${p.hookHeight.toFixed(2)} · 坡度 ${p.insertionAngle.toFixed(0)}°`;
       controls.edgeMeasure.textContent = `外圈保留 ${p.outerRingWidth.toFixed(1)} mm`;
       controls.metricDiameter.textContent = `${p.coverDiameter.toFixed(1)} mm`;
-      controls.metricHeight.textContent = `${(p.spokeBackDepth + p.hookHeight + p.coverThickness + (p.mode === "relief" ? p.reliefHeight : 0)).toFixed(1)} mm`;
+      const rearProjection = Math.max(p.spokeBackDepth + p.hookHeight, p.skirtHeight);
+      controls.metricHeight.textContent = `${(rearProjection + p.coverThickness + (p.mode === "relief" ? p.reliefHeight : 0)).toFixed(1)} mm`;
       controls.metricClips.textContent = `${m.enabled} / ${p.clipCount} 组`;
       controls.metricTriangles.textContent = state.geometryVerification
         ? `封闭 · ${state.geometryVerification.triangleCount.toLocaleString()} triangles`
@@ -822,7 +1057,7 @@
     }
 
     function patternOffsetText() {
-      return `X ${state.patternOffsetX.toFixed(1)} · Y ${state.patternOffsetY.toFixed(1)} mm`;
+      return `X ${state.patternOffsetX.toFixed(1)} · Y ${state.patternOffsetY.toFixed(1)} mm · 旋转 ${state.patternRotation.toFixed(0)}°`;
     }
 
     function setPatternOffset(x, y, rebuildModel = true) {
@@ -831,6 +1066,16 @@
       const ratio = distance > limit ? limit / distance : 1;
       state.patternOffsetX = x * ratio;
       state.patternOffsetY = y * ratio;
+      drawPatternPreview(state.mask?.data || null);
+      updatePatternEditorControls();
+      if (rebuildModel) scheduleRebuild();
+    }
+
+    function setPatternRotation(value, rebuildModel = true) {
+      const numericValue = Number(value);
+      state.patternRotation = Math.max(-180, Math.min(180, Number.isFinite(numericValue) ? numericValue : 0));
+      controls.patternRotation.value = String(state.patternRotation);
+      $('[data-pair="patternRotation"]').value = String(state.patternRotation);
       drawPatternPreview(state.mask?.data || null);
       updatePatternEditorControls();
       if (rebuildModel) scheduleRebuild();
@@ -848,21 +1093,29 @@
       const availableSize = patternAvailableSize();
       const offsetX = state.patternOffsetX / availableSize * size;
       const offsetY = -state.patternOffsetY / availableSize * size;
-      const targetOffsetX = (size - targetSize) / 2 + offsetX;
-      const targetOffsetY = (size - targetSize) / 2 + offsetY;
+      const centerX = size / 2 + offsetX;
+      const centerY = size / 2 + offsetY;
+      const canvasRotation = -state.patternRotation * Math.PI / 180;
+      const drawTransformed = (source) => {
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(canvasRotation);
+        ctx.drawImage(source, -targetSize / 2, -targetSize / 2, targetSize, targetSize);
+        ctx.restore();
+      };
       if (state.patternView === "source" && state.sourcePreview) {
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(state.sourcePreview, targetOffsetX, targetOffsetY, targetSize, targetSize);
+        drawTransformed(state.sourcePreview);
       } else if (!mask) {
         ctx.strokeStyle = "#ec6a3a";
         ctx.lineWidth = size * .115 * scale;
         ctx.lineCap = "round";
         for (let index = 0; index < 10; index += 1) {
-          const angle = Math.PI * 2 * (index + .5) / 10;
+          const angle = Math.PI * 2 * (index + .5) / 10 + canvasRotation;
           ctx.beginPath();
-          ctx.moveTo(size / 2 + offsetX + Math.cos(angle) * size * .188 * scale, size / 2 + offsetY + Math.sin(angle) * size * .188 * scale);
-          ctx.lineTo(size / 2 + offsetX + Math.cos(angle) * size * .365 * scale, size / 2 + offsetY + Math.sin(angle) * size * .365 * scale);
+          ctx.moveTo(centerX + Math.cos(angle) * size * .188 * scale, centerY + Math.sin(angle) * size * .188 * scale);
+          ctx.lineTo(centerX + Math.cos(angle) * size * .365 * scale, centerY + Math.sin(angle) * size * .365 * scale);
           ctx.stroke();
         }
       } else {
@@ -883,7 +1136,7 @@
         sourceCtx.putImageData(preview, 0, 0);
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(source, targetOffsetX, targetOffsetY, targetSize, targetSize);
+        drawTransformed(source);
       }
       ctx.strokeStyle = "#d5cec1";
       ctx.lineWidth = Math.max(1, size / 256);
@@ -1173,7 +1426,7 @@
       controls.redoPattern.disabled = !state.patternRedo.length;
       controls.clearPatternEdits.disabled = !state.patternEdits.length;
       controls.patternOffsetReadout.textContent = patternOffsetText();
-      controls.centerPattern.disabled = Math.hypot(state.patternOffsetX, state.patternOffsetY) < .05;
+      controls.centerPattern.disabled = Math.hypot(state.patternOffsetX, state.patternOffsetY) < .05 && Math.abs(state.patternRotation) < .5;
       controls.islandPanel.hidden = currentMode() !== "cut" || state.patternView !== "mask" || !state.solidIslands.length;
       controls.islandCounter.textContent = state.solidIslands.length ? `${state.selectedIsland + 1} / ${state.solidIslands.length}` : "0 / 0";
       controls.patternCanvasWrap.dataset.view = state.patternView;
@@ -1192,10 +1445,13 @@
       const rect = controls.patternCanvas.getBoundingClientRect();
       const scale = currentPatternScale();
       const availableSize = patternAvailableSize();
-      const offsetX = state.patternOffsetX / availableSize;
-      const offsetY = -state.patternOffsetY / availableSize;
-      const sourceX = ((event.clientX - rect.left) / rect.width - (1 - scale) / 2 - offsetX) / scale;
-      const sourceY = ((event.clientY - rect.top) / rect.height - (1 - scale) / 2 - offsetY) / scale;
+      const screenX = (event.clientX - rect.left) / rect.width - .5 - state.patternOffsetX / availableSize;
+      const screenY = (event.clientY - rect.top) / rect.height - .5 + state.patternOffsetY / availableSize;
+      const inverseRotation = state.patternRotation * Math.PI / 180;
+      const rotatedX = Math.cos(inverseRotation) * screenX - Math.sin(inverseRotation) * screenY;
+      const rotatedY = Math.sin(inverseRotation) * screenX + Math.cos(inverseRotation) * screenY;
+      const sourceX = rotatedX / scale + .5;
+      const sourceY = rotatedY / scale + .5;
       if (sourceX < 0 || sourceX > 1 || sourceY < 0 || sourceY > 1) return null;
       return { x:sourceX, y:sourceY };
     }
@@ -1443,10 +1699,11 @@
       const enabled = activeClipIndices(p).length;
       const strengthName = { easy:"容易拆装", balanced:"均衡", reinforced:"加强且可拆" }[p.strengthPreset];
       const fitName = { tight:"偏紧", standard:"标准", loose:"偏松" }[p.fitPreset];
+      const coverDimensions = `盖板厚度 ${p.coverThickness.toFixed(1)} mm；外圈裙边 ${p.skirtHeight > 0 ? `${p.skirtHeight.toFixed(1)} mm 高 × ${p.skirtThickness.toFixed(1)} mm 厚` : "未生成"}`;
       const clipDimensions = `开口宽度 ${p.openingWidth} mm；径向宽度 ${p.contactLength} mm；根/末爪厚 ${p.legThickness}/${p.tipThickness} mm；边缘间隙 ${p.sideClearance} mm；单侧外勾 ${p.hookReach} mm；自动倒钩轴向高度 ${p.hookHeight} mm；导入坡度 ${p.insertionAngle.toFixed(1)}°`;
-      const patternSettings = `比例 ${(p.patternScale * 100).toFixed(0)}%；位置 X ${p.patternOffsetX.toFixed(1)} / Y ${p.patternOffsetY.toFixed(1)} mm；采样 ${p.samplingResolution}px；轮廓平滑 ${p.patternSmoothing}；杂点清理 ${p.cleanup}；镂空闭合 ${p.closeStrength}；最小镂空 ${p.minHoleArea} mm²；镂空扩张 ${p.hollowExpansion} mm；手工编辑 ${state.patternEdits.length} 项；阈值 ${numberValue(controls.threshold)}；反色 ${controls.invertPattern.checked ? "开启" : "关闭"}`;
+      const patternSettings = `比例 ${(p.patternScale * 100).toFixed(0)}%；位置 X ${p.patternOffsetX.toFixed(1)} / Y ${p.patternOffsetY.toFixed(1)} mm；旋转 ${p.patternRotation.toFixed(0)}°；采样 ${p.samplingResolution}px；轮廓平滑 ${p.patternSmoothing}；杂点清理 ${p.cleanup}；镂空闭合 ${p.closeStrength}；最小镂空 ${p.minHoleArea} mm²；镂空扩张 ${p.hollowExpansion} mm；手工编辑 ${state.patternEdits.length} 项；阈值 ${numberValue(controls.threshold)}；反色 ${controls.invertPattern.checked ? "开启" : "关闭"}`;
       const geometryCheck = state.geometryVerification ? `${state.geometryVerification.status}; components=${state.geometryVerification.componentCount}; invalidEdges=${state.geometryVerification.invalidEdges}` : "Unavailable";
-      const model = `<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="zh-CN" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Title">婴儿车装饰轮毂盖 ${p.coverDiameter}mm</metadata><metadata name="Application">婴儿车轮毂盖生成器</metadata><metadata name="Description">非承力装饰件；${enabled} 组同开口向外双爪；${p.mode === "cut" ? "贯穿镂空" : "浅浮雕"}</metadata><metadata name="StrengthPreset">${strengthName}</metadata><metadata name="FitPreset">${fitName}</metadata><metadata name="ClipSettings">${state.customClipSettings ? "自定义" : "跟随预设"}</metadata><metadata name="ClipDimensions">${clipDimensions}</metadata><metadata name="PatternSettings">${patternSettings}</metadata><metadata name="EstimatedStrain">${p.estimatedStrain.toFixed(2)}%</metadata><metadata name="GeometryKernel">Manifold 3.5.1</metadata><metadata name="GeometryCheck">${geometryCheck}</metadata><resources><object id="1" type="model" name="${escapeXml(`轮毂盖-${enabled}组向外双爪`)}"><mesh><vertices>${vertexXml}</vertices><triangles>${faceXml}</triangles></mesh></object></resources><build><item objectid="1"/></build></model>`;
+      const model = `<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="zh-CN" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Title">婴儿车装饰轮毂盖 ${p.coverDiameter}mm</metadata><metadata name="Application">婴儿车轮毂盖生成器</metadata><metadata name="Description">非承力装饰件；${enabled} 组同开口向外双爪；${p.mode === "cut" ? "贯穿镂空" : "浅浮雕"}</metadata><metadata name="CoverDimensions">${coverDimensions}</metadata><metadata name="StrengthPreset">${strengthName}</metadata><metadata name="FitPreset">${fitName}</metadata><metadata name="ClipSettings">${state.customClipSettings ? "自定义" : "跟随预设"}</metadata><metadata name="ClipDimensions">${clipDimensions}</metadata><metadata name="PatternSettings">${patternSettings}</metadata><metadata name="EstimatedStrain">${p.estimatedStrain.toFixed(2)}%</metadata><metadata name="GeometryKernel">Manifold 3.5.1</metadata><metadata name="GeometryCheck">${geometryCheck}</metadata><resources><object id="1" type="model" name="${escapeXml(`轮毂盖-${enabled}组向外双爪`)}"><mesh><vertices>${vertexXml}</vertices><triangles>${faceXml}</triangles></mesh></object></resources><build><item objectid="1"/></build></model>`;
       const types = `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>`;
       const rels = `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>`;
       return createStoredZip([{ name:"[Content_Types].xml", content:types }, { name:"_rels/.rels", content:rels }, { name:"3D/3dmodel.model", content:model }]);
@@ -1468,6 +1725,7 @@
         number.value = range.value;
         if (range.dataset.pair === "clipCount") resetClipGroups(range.value);
         if (range.dataset.pair === "brushSize") updatePatternEditorControls();
+        else if (range.dataset.pair === "patternRotation") setPatternRotation(range.value);
         else if (imageProcessingPairs.includes(range.dataset.pair)) processImage();
         else scheduleRebuild();
       });
@@ -1475,9 +1733,16 @@
         range.value = number.value;
         if (range.dataset.pair === "clipCount") resetClipGroups(number.value);
         if (range.dataset.pair === "brushSize") updatePatternEditorControls();
+        else if (range.dataset.pair === "patternRotation") setPatternRotation(number.value);
         else if (imageProcessingPairs.includes(range.dataset.pair)) processImage();
         else scheduleRebuild();
       });
+    });
+    controls.saveConfig.addEventListener("click", saveConfig);
+    controls.loadConfig.addEventListener("click", loadConfig);
+    controls.configList.addEventListener("change", () => {
+      const config = selectedSavedConfig();
+      if (config) controls.configName.value = config.name;
     });
     controls.clipGroupPicker.addEventListener("click", (event) => {
       const button = event.target.closest("[data-clip-index]");
@@ -1506,6 +1771,9 @@
         state.image = image;
         state.patternOffsetX = 0;
         state.patternOffsetY = 0;
+        state.patternRotation = 0;
+        controls.patternRotation.value = "0";
+        $('[data-pair="patternRotation"]').value = "0";
         state.patternEdits = [];
         state.patternUndo = [];
         state.patternRedo = [];
@@ -1535,8 +1803,9 @@
     controls.undoPattern.addEventListener("click", undoPatternEdit);
     controls.redoPattern.addEventListener("click", redoPatternEdit);
     controls.centerPattern.addEventListener("click", () => {
-      setPatternOffset(0, 0);
-      showToast("图案已恢复居中");
+      setPatternOffset(0, 0, false);
+      setPatternRotation(0);
+      showToast("图案位置与角度已复位");
     });
     controls.clearPatternEdits.addEventListener("click", () => {
       if (!state.patternEdits.length) return;
@@ -1653,6 +1922,7 @@
     window.addEventListener("resize", requestRender);
 
     async function initializeApp() {
+      updateConfigStore();
       try {
         await initializeGeometryKernel();
         state.geometryReady = true;
