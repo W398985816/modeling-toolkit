@@ -544,6 +544,7 @@
               <div class="control"><label for="outlineSmoothing">描线平滑</label><input id="outlineSmoothing" type="number" min="0" max="4" step="1" value="1"><input data-pair="outlineSmoothing" type="range" min="0" max="4" step="1" value="1"></div>
               <p class="paint-note">PETG 上色前建议轻度打磨或使用塑料底漆，并先做小面积附着测试。</p>
             </div>
+            <p class="control-note">3MF 保存模型、分色和零件，不包含打印机配置。Bambu Studio 若提示“配置无效，仅加载几何数据”，继续后请在颜色匹配窗口确认耗材；不要把分色零件拆成独立对象。</p>
           </div>
           <p class="control-note" id="patternStatus">未上传图案，将使用默认放射镂空。</p>
           <div class="pattern-row">
@@ -2176,6 +2177,10 @@
       const triangles = mesh.triangles.map((face) => `<triangle v1="${face[0]}" v2="${face[1]}" v3="${face[2]}"/>`).join("");
       return `<mesh><vertices>${vertices}</vertices><triangles>${triangles}</triangles></mesh>`;
     }
+    function threeMfPartSettings(id, name, materialIndex) {
+      // 仅描述零件及其耗材编号；不写入机型、AMS 槽位、温度或 G-code。
+      return `<part id="${id}" subtype="normal_part"><metadata key="name" value="${escapeXml(name)}"/><metadata key="extruder" value="${materialIndex + 1}"/></part>`;
+    }
     function translationTransform(x, y, z) { return `1 0 0 0 1 0 0 0 1 ${x.toFixed(6)} ${y.toFixed(6)} ${z.toFixed(6)}`; }
     function buildThreeMf() {
       if (!state.exportMesh) throw new Error("封闭索引网格尚未生成");
@@ -2192,18 +2197,25 @@
       const geometryCheck = state.geometryVerification ? `${state.geometryVerification.status}; components=${state.geometryVerification.componentCount}; invalidEdges=${state.geometryVerification.invalidEdges}` : "Unavailable";
       const materialPartChecks = state.materialParts.map((part, index) => `${index + 1}:${part.verification.status},components=${part.verification.componentCount},invalidEdges=${part.verification.invalidEdges}`).join("; ");
       const modeName = p.mode === "cut" ? "贯穿镂空" : p.mode === "relief" ? "浅浮雕" : p.colorStyle === "outline" ? "实体盘双色描线" : "实体盘多色";
-      let resources, build;
+      // 颜色组 ID 放在所有模型对象之后，避免与分色零件、装配体和独立卡扣冲突。
+      const colorGroupId = p.mode === "color" ? state.materialParts.length + 3 + (p.mount ? enabled : 0) : null;
+      let resources, build, modelSettings;
       if (p.mode === "color") {
         if (!state.materialParts.length) throw new Error("分色封闭网格尚未生成");
         const materials = p.colorPalette.map((color, index) => `<base name="${escapeXml(index === 0 ? "背景底色" : p.colorStyle === "outline" ? "黑色描线" : `图案颜色 ${index}`)}" displaycolor="${color.toUpperCase()}"/>`).join("");
-        const objects = state.materialParts.map((part, index) => `<object id="${index + 2}" type="model" pid="1" pindex="${part.materialIndex}" name="${escapeXml(part.name)}">${meshXml(part.exportMesh, Boolean(p.mount))}</object>`).join("");
+        // Bambu 读取 Materials 扩展的对象颜色；整块赋色可直接映射耗材，无需逐三角面涂色。
+        const colorGroup = `<m:colorgroup id="${colorGroupId}">${p.colorPalette.map((color) => `<m:color color="${color.toUpperCase()}"/>`).join("")}</m:colorgroup>`;
+        const objects = state.materialParts.map((part, index) => `<object id="${index + 2}" type="model" pid="${colorGroupId}" pindex="${part.materialIndex}" name="${escapeXml(part.name)}">${meshXml(part.exportMesh, Boolean(p.mount))}</object>`).join("");
         const assemblyId = state.materialParts.length + 2;
         const components = state.materialParts.map((_, index) => `<component objectid="${index + 2}"/>`).join("");
-        resources = `<basematerials id="1">${materials}</basematerials>${objects}<object id="${assemblyId}" type="model" name="${escapeXml(`轮毂盖-${modeName}`)}"><components>${components}</components></object>`;
+        resources = `<basematerials id="1">${materials}</basematerials>${colorGroup}${objects}<object id="${assemblyId}" type="model" name="${escapeXml(`轮毂盖-${modeName}`)}"><components>${components}</components></object>`;
         build = `<item objectid="${assemblyId}"/>`;
+        modelSettings = `<object id="${assemblyId}"><metadata key="name" value="${escapeXml(`轮毂盖-${modeName}`)}"/>${state.materialParts.map((part, index) => threeMfPartSettings(index + 2, part.name, part.materialIndex)).join("")}</object>`;
       } else {
-        resources = `<object id="1" type="model" name="${escapeXml(p.mount ? `轮毂盖与${enabled}组刚性固定座` : `轮毂盖-${enabled}组向外双爪`)}">${meshXml(state.exportMesh, Boolean(p.mount))}</object>`;
+        const name = p.mount ? `轮毂盖与${enabled}组刚性固定座` : `轮毂盖-${enabled}组向外双爪`;
+        resources = `<object id="1" type="model" name="${escapeXml(name)}">${meshXml(state.exportMesh, Boolean(p.mount))}</object>`;
         build = `<item objectid="1"/>`;
+        modelSettings = `<object id="1"><metadata key="name" value="${escapeXml(name)}"/>${threeMfPartSettings(1, name, 0)}</object>`;
       }
       let mountingMetadata = "";
       if (p.mount) {
@@ -2217,15 +2229,16 @@
         const firstId = p.mode === "color" ? state.materialParts.length + 3 : 2;
         state.clipParts.forEach((part, index) => {
           const id = firstId + index;
-          resources += `<object id="${id}" type="model"${p.mode === "color" ? ' pid="1" pindex="0"' : ""} name="${escapeXml(part.name)}">${meshXml(sample.exportMesh, true)}</object>`;
+          resources += `<object id="${id}" type="model"${p.mode === "color" ? ` pid="${colorGroupId}" pindex="0"` : ""} name="${escapeXml(part.name)}">${meshXml(sample.exportMesh, true)}</object>`;
           build += `<item objectid="${id}" transform="${translationTransform(x,(index-(enabled-1)/2)*pitch,0)}"/>`;
+          modelSettings += `<object id="${id}"><metadata key="name" value="${escapeXml(part.name)}"/>${threeMfPartSettings(id, part.name, 0)}</object>`;
         });
         mountingMetadata = `<metadata name="DetachableMount">${escapeXml(JSON.stringify(p.mount))}</metadata><metadata name="MechanicalPartChecks">${escapeXml(JSON.stringify(state.clipParts.map((part) => ({ name:part.name, ...part.verification }))))}</metadata><metadata name="PrintingLayout">盖板与卡扣为独立打印对象；卡扣已侧放。按打印平台大小重新排版并检查支撑；不要合并。侧窗按压解锁，先拆下整盖再更换卡扣。</metadata>`;
       }
-      const model = `<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="zh-CN" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Title">婴儿车装饰轮毂盖 ${p.coverDiameter}mm</metadata><metadata name="Application">婴儿车轮毂盖生成器</metadata><metadata name="Description">非承力装饰件；${enabled} 组同开口向外双爪；${modeName}</metadata><metadata name="AttachmentMode">${p.attachmentMode}</metadata>${mountingMetadata}<metadata name="CoverDimensions">${escapeXml(coverDimensions)}</metadata><metadata name="StrengthPreset">${strengthName}</metadata><metadata name="FitPreset">${fitName}</metadata><metadata name="ClipSettings">${state.customClipSettings ? "自定义" : "跟随预设"}</metadata><metadata name="ClipDimensions">${escapeXml(clipDimensions)}</metadata><metadata name="PatternSettings">${escapeXml(patternSettings)}</metadata><metadata name="EstimatedStrain">${p.estimatedStrain.toFixed(2)}%</metadata><metadata name="GeometryKernel">Manifold 3.5.1</metadata><metadata name="GeometryCheck">${geometryCheck}</metadata>${p.mode === "color" ? `<metadata name="MaterialPartChecks">${escapeXml(materialPartChecks)}</metadata>` : ""}<resources>${resources}</resources><build>${build}</build></model>`;
-      const types = `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>`;
+      const model = `<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="zh-CN" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"${p.mode === "color" ? ' xmlns:m="http://schemas.microsoft.com/3dmanufacturing/material/2015/02"' : ""}><metadata name="Title">婴儿车装饰轮毂盖 ${p.coverDiameter}mm</metadata><metadata name="Application">婴儿车轮毂盖生成器</metadata><metadata name="Description">非承力装饰件；${enabled} 组同开口向外双爪；${modeName}</metadata><metadata name="AttachmentMode">${p.attachmentMode}</metadata>${mountingMetadata}<metadata name="CoverDimensions">${escapeXml(coverDimensions)}</metadata><metadata name="StrengthPreset">${strengthName}</metadata><metadata name="FitPreset">${fitName}</metadata><metadata name="ClipSettings">${state.customClipSettings ? "自定义" : "跟随预设"}</metadata><metadata name="ClipDimensions">${escapeXml(clipDimensions)}</metadata><metadata name="PatternSettings">${escapeXml(patternSettings)}</metadata><metadata name="EstimatedStrain">${p.estimatedStrain.toFixed(2)}%</metadata><metadata name="GeometryKernel">Manifold 3.5.1</metadata><metadata name="GeometryCheck">${geometryCheck}</metadata>${p.mode === "color" ? `<metadata name="MaterialPartChecks">${escapeXml(materialPartChecks)}</metadata>` : ""}<resources>${resources}</resources><build>${build}</build></model>`;
+      const types = `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/><Default Extension="config" ContentType="application/xml"/></Types>`;
       const rels = `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>`;
-      return createStoredZip([{ name:"[Content_Types].xml", content:types }, { name:"_rels/.rels", content:rels }, { name:"3D/3dmodel.model", content:model }]);
+      return createStoredZip([{ name:"[Content_Types].xml", content:types }, { name:"_rels/.rels", content:rels }, { name:"3D/3dmodel.model", content:model }, { name:"Metadata/model_settings.config", content:`<?xml version="1.0" encoding="UTF-8"?><config>${modelSettings}</config>` }]);
     }
 
     function download(data, filename, type) {
