@@ -85,15 +85,6 @@
       border-right: 1px solid var(--line);
       background: rgba(242, 238, 228, 0.94);
     }
-    .notice {
-      margin-bottom: 14px;
-      padding: 13px 14px;
-      border-left: 3px solid var(--orange);
-      color: #6f3929;
-      background: #fff1e7;
-      font-size: 12px;
-      line-height: 1.6;
-    }
     .config-store {
       display: grid;
       gap: 8px;
@@ -134,14 +125,17 @@
     }
     .section-heading {
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      gap: 10px;
       padding: 13px 14px;
-      border-bottom: 1px solid var(--line);
     }
     .section-heading strong { font-family: var(--display); font-size: 17px; }
-    .section-heading span { color: var(--orange); font: 9px var(--mono); letter-spacing: 0.12em; }
+    .section-heading span { margin-left: auto; color: var(--orange); font: 9px var(--mono); letter-spacing: 0.12em; }
     .section-body { display: grid; gap: 13px; padding: 14px; }
+    #detachableSettings:not([hidden]) { display: grid; gap: 13px; }
+    #attachmentPreviewControl { display: flex; flex-basis: 100%; align-items: center; gap: 8px; color: var(--ink-soft); font-size: 10px; }
+    #attachmentPreviewControl[hidden] { display: none; }
+    #attachmentPreview { min-width: 0; padding: 6px; border: 1px solid var(--line); color: var(--ink); background: #fffdf8; font: inherit; }
     .control { display: grid; grid-template-columns: 1fr 78px; gap: 7px 10px; align-items: center; }
     .control label { font-size: 12px; font-weight: 650; }
     .control output { color: var(--orange); font: 10px var(--mono); text-align: right; }
@@ -167,32 +161,6 @@
     .position-readout .wide { grid-column: 1 / -1; }
     .position-readout span { display: block; margin-bottom: 4px; color: var(--ink-soft); font-size: 9px; }
     .position-readout strong { color: var(--teal); font: 600 13px var(--mono); }
-    .diagram {
-      position: relative;
-      aspect-ratio: 2 / 1;
-      overflow: hidden;
-      border: 1px solid var(--line);
-      border-radius: 4px;
-      background: linear-gradient(145deg, #f7f3e9 0%, #e9e5da 100%);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
-    }
-    .diagram svg { width: 100%; height: 100%; }
-    .diagram text { font-family: var(--mono); }
-    .diagram .diagram-grid { fill: url(#fit-grid); opacity: .55; }
-    .diagram .cover-shell { fill: #242824; stroke: #111511; stroke-width: 1.2; }
-    .diagram .cover-face { fill: #fff9ec; opacity: .16; }
-    .diagram .spoke-body { fill: url(#spoke-fill); stroke: #286d68; stroke-width: 1.2; }
-    .diagram .spoke-edge { stroke: #164d49; stroke-width: 3; }
-    .diagram .claw-body { fill: url(#claw-fill); stroke: #c84e23; stroke-width: 1.2; stroke-linejoin: round; }
-    .diagram .claw-highlight { fill: none; stroke: rgba(255,255,255,.68); stroke-width: 1; }
-    .diagram .measure { fill: none; stroke: var(--orange); stroke-width: 1.25; }
-    .diagram .guide { fill: none; stroke: #a69d8f; stroke-width: 1; stroke-dasharray: 3 3; }
-    .diagram .motion { fill: none; stroke: var(--orange); stroke-width: 1.35; }
-    .diagram .measure-label { fill: #b84b26; font-size: 8.5px; font-weight: 700; letter-spacing: .05em; }
-    .diagram .part-label { fill: #676c66; font-size: 7.5px; letter-spacing: .04em; }
-    .diagram .cover-label { fill: #f7f2e8; font-size: 7.5px; font-weight: 700; letter-spacing: .08em; }
-    .diagram .section-label { fill: #fffaf0; font-size: 7px; font-weight: 700; letter-spacing: .12em; }
-    .diagram .opening-label { fill: #294e4b; font-size: 8px; font-weight: 700; letter-spacing: .04em; }
     .clip-group-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
     .clip-group-button {
       min-height: 34px;
@@ -270,8 +238,11 @@
     .pattern-legend span::before { display: inline-block; width: 8px; height: 8px; margin-right: 4px; content: ""; }
     .pattern-legend .cut::before { background: var(--orange); }
     .pattern-legend .solid::before { background: #f7f3ea; border: 1px solid var(--line); }
+    .pattern-legend.hollow .cut::before { background: #181817; }
+    .pattern-legend.hollow .solid::before { background: white; }
     .pattern-legend .island::before { background: var(--danger); }
     .mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; border: 1px solid var(--line); background: var(--line); }
+    .mode-switch.mode-three { grid-template-columns: repeat(3, 1fr); }
     .mode-switch label { position: relative; cursor: pointer; }
     .mode-switch input { position: absolute; opacity: 0; }
     .mode-switch span { display: block; padding: 9px 6px; text-align: center; background: #fffdf8; font-size: 11px; }
@@ -280,6 +251,18 @@
     .preset-switch span { display: grid; min-height: 48px; place-items: center; line-height: 1.35; }
     .inline-check { display: flex; justify-content: space-between; gap: 12px; align-items: center; font-size: 11px; }
     .inline-check input { accent-color: var(--orange); }
+    .color-settings, .color-subpanel { display: grid; gap: 12px; }
+    .color-settings { padding: 11px; border: 1px solid var(--line); background: rgba(231, 224, 210, .42); }
+    .color-settings[hidden], .color-subpanel[hidden], .binary-only[hidden] { display: none; }
+    .color-input-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; font-size: 12px; font-weight: 650; }
+    .color-input-row input[type="color"] { width: 56px; height: 34px; padding: 2px; border: 1px solid var(--line); background: #fffdf8; cursor: pointer; }
+    .palette-grid { display: grid; gap: 6px; }
+    .palette-item { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 8px; align-items: center; min-height: 38px; padding: 5px 6px; border: 1px solid var(--line); background: #fffdf8; }
+    .palette-item.active { border-color: var(--teal); box-shadow: inset 3px 0 var(--teal); }
+    .palette-item input[type="color"] { width: 30px; height: 28px; padding: 1px; border: 0; background: transparent; cursor: pointer; }
+    .palette-item button { min-height: 27px; border: 1px solid var(--line); color: var(--ink-soft); background: transparent; cursor: pointer; font: 9px var(--mono); }
+    .palette-item strong { font-size: 10px; }
+    .paint-note { margin: 0; padding: 9px 10px; border-left: 2px solid var(--teal); color: var(--ink-soft); background: rgba(46,119,113,.07); font-size: 9px; line-height: 1.55; }
 
     details.section > summary {
       padding: 13px 14px;
@@ -289,6 +272,8 @@
       list-style: none;
     }
     details.section > summary::after { float: right; color: var(--orange); content: "+"; }
+    details.section > summary::-webkit-details-marker { display: none; }
+    details.section > summary:focus-visible { outline: 2px solid var(--teal); outline-offset: -3px; }
     details.section[open] > summary::after { content: "−"; }
     details.section[open] > summary { border-bottom: 1px solid var(--line); }
 
@@ -315,6 +300,7 @@
       font-weight: 700;
     }
     .export-button.secondary { color: var(--ink); background: transparent; }
+    .export-button.wide { grid-column: 1 / -1; }
     .export-button.trial { grid-column: 1 / -1; border-color: var(--orange); color: #6f3929; background: #fff1e7; }
     .export-button:disabled { cursor: not-allowed; opacity: .38; }
     .export-note { margin: 9px 0 0; color: var(--ink-soft); font-size: 9px; line-height: 1.5; }
@@ -340,7 +326,7 @@
       border-bottom: 1px solid rgba(34, 37, 34, .18);
       background: rgba(255,255,255,.26);
     }
-    .view-buttons { display: flex; gap: 6px; }
+    .view-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
     .view-button, .reset-button {
       padding: 7px 10px;
       border: 1px solid rgba(34,37,34,.25);
@@ -407,7 +393,7 @@
       .app-header { grid-template-columns: 1fr auto; padding: 0 14px; }
       .header-center, .header-chip { display: none; }
       .app-main { display: flex; flex-direction: column; }
-      .workspace { position: relative; top: 0; order: -1; height: 58vh; min-height: 480px; }
+      .workspace { position: relative; top: 0; order: -1; height: auto; min-height: 0; overflow: visible; grid-template-rows: auto 420px auto; }
       .sidebar { border-top: 1px solid var(--line); border-right: 0; }
       .metrics { grid-template-columns: 1fr 1fr; }
       .metric:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
@@ -415,7 +401,7 @@
     }
     @media (max-width: 520px) {
       .brand span, .toolbar-meta span:first-child { display: none; }
-      .workspace { height: 500px; min-height: 500px; }
+      .workspace { height: auto; min-height: 0; grid-template-rows: auto 360px auto; }
       .workspace-toolbar { align-items: flex-start; flex-direction: column; }
       .view-buttons { width: 100%; }
       .view-button { flex: 1; }
@@ -435,7 +421,6 @@
 
   <main class="app-main">
     <aside class="sidebar" aria-label="轮毂盖参数">
-      <div class="notice"><strong>非承力装饰件</strong><br>不得替代原厂轮毂、轴承、制动或锁止结构。打印后必须完成拉脱、振动与车轮干涉检查。</div>
       <div class="config-store">
         <div class="config-store-head"><strong>本地配置</strong><span id="configStatus">尚未保存</span></div>
         <div class="config-save-row"><input id="configName" type="text" maxlength="32" placeholder="配置名称，例如：前轮试装"><button id="saveConfig" type="button">保存</button></div>
@@ -443,76 +428,38 @@
         <small>可保存多组；同名会更新该组。仅保留参数，不保存上传图案、笔刷编辑或图案位置与角度。</small>
       </div>
 
-      <section class="section">
-        <div class="section-heading"><strong>盖板尺寸</strong><span>01 / BODY</span></div>
+      <details class="section">
+        <summary class="section-heading"><strong>盖板尺寸</strong><span>01 / BODY</span></summary>
         <div class="section-body">
           <div class="control"><label for="coverDiameter">轮毂盖外径</label><input id="coverDiameter" type="number" min="80" max="320" step="1" value="200"><input data-pair="coverDiameter" type="range" min="80" max="320" step="1" value="200"></div>
           <div class="control"><label for="coverThickness">盖板厚度</label><input id="coverThickness" type="number" min="1.2" max="6" step="0.1" value="2.4"><input data-pair="coverThickness" type="range" min="1.2" max="6" step="0.1" value="2.4"><p class="control-note">默认 2.4 mm；低于 1.6 mm 时应先打印样件确认根部刚度。</p></div>
           <div class="control"><label for="skirtHeight">外圈裙边高度</label><input id="skirtHeight" type="number" min="0" max="30" step="0.5" value="0"><input data-pair="skirtHeight" type="range" min="0" max="30" step="0.5" value="0"><p class="control-note">从盖板背面向后延伸；设为 0 mm 时不生成裙边。</p></div>
           <div class="control"><label for="skirtThickness">外圈裙边厚度</label><input id="skirtThickness" type="number" min="1.2" max="8" step="0.1" value="2"><input data-pair="skirtThickness" type="range" min="1.2" max="8" step="0.1" value="2"><p class="control-note">厚度向内增加，盖板外径不变。图案不会切入外圈，也不会切断卡爪根座到外圈的实体桥。</p></div>
         </div>
-      </section>
+      </details>
 
-      <section class="section">
-        <div class="section-heading"><strong>轮辐开口与双爪</strong><span>02 / FIT</span></div>
+      <details class="section">
+        <summary class="section-heading"><strong>轮辐开口与双爪</strong><span>02 / FIT</span></summary>
         <div class="section-body">
-          <div class="diagram" aria-label="双爪穿过同一轮辐开口并向外卡边的测量示意">
-            <svg viewBox="0 0 360 180" role="img" aria-labelledby="fit-diagram-title fit-diagram-desc">
-              <title id="fit-diagram-title">双爪穿过同一轮辐开口并向外卡住背面边缘</title>
-              <desc id="fit-diagram-desc">从轮毂盖背面到轮辐背面的总深度，以及左右轮辐之间开口宽度的测量方法。</desc>
-              <defs>
-                <pattern id="fit-grid" width="12" height="12" patternUnits="userSpaceOnUse">
-                  <path d="M12 0H0V12" fill="none" stroke="#cfc7b8" stroke-width=".55"/>
-                </pattern>
-                <linearGradient id="spoke-fill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stop-color="#b9d5cf"/>
-                  <stop offset="1" stop-color="#77aaa3"/>
-                </linearGradient>
-                <linearGradient id="claw-fill" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="#ff9a67"/>
-                  <stop offset="1" stop-color="#e85e31"/>
-                </linearGradient>
-                <marker id="measure-arrow" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-                  <path d="M8 0 0 4l8 4z" fill="#ec6a3a"/>
-                </marker>
-                <marker id="motion-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
-                  <path d="M0 0 8 4 0 8z" fill="#ec6a3a"/>
-                </marker>
-              </defs>
-              <rect width="360" height="180" fill="#f4f0e7"/>
-              <rect class="diagram-grid" width="360" height="180"/>
-
-              <rect x="43" y="22" width="274" height="22" rx="3" class="cover-shell"/>
-              <path class="cover-face" d="M48 26h264v5H48z"/>
-              <rect x="52" y="28" width="43" height="11" rx="5.5" fill="#ec6a3a"/>
-              <text x="73.5" y="35.8" text-anchor="middle" class="section-label">装配剖面</text>
-              <text x="270" y="36" text-anchor="middle" class="cover-label">盖板背面</text>
-
-              <path class="spoke-body" d="M35 72h91v54H35zM234 72h91v54h-91z"/>
-              <path class="spoke-edge" d="M126 72v54M234 72v54"/>
-              <text x="80.5" y="96" text-anchor="middle" class="part-label">左轮辐</text>
-              <text x="279.5" y="96" text-anchor="middle" class="part-label">右轮辐</text>
-
-              <path class="claw-body" d="M143 44h16v84h-27l-13 12h40V44z"/>
-              <path class="claw-body" d="M201 44h16v84h11l13 12h-40V44z"/>
-              <path class="claw-highlight" d="M147 48v76M205 48v76"/>
-              <path class="motion" d="M143 116h-15" marker-end="url(#motion-arrow)"/>
-              <path class="motion" d="M217 116h15" marker-end="url(#motion-arrow)"/>
-              <text x="180" y="84" text-anchor="middle" class="opening-label">两爪共用一个开口</text>
-              <text x="180" y="96" text-anchor="middle" class="part-label">中间保持完全空开</text>
-              <text x="116" y="111" text-anchor="end" class="measure-label">向外挂边</text>
-              <text x="244" y="111" class="measure-label">向外挂边</text>
-
-              <path class="guide" d="M43 44H18M35 126H18M126 126v31M234 126v31"/>
-              <path class="measure" d="M19 48v74" marker-start="url(#measure-arrow)" marker-end="url(#measure-arrow)"/>
-              <text x="10" y="86" text-anchor="middle" transform="rotate(-90 10 86)" class="measure-label">卡扣总深度</text>
-              <path class="measure" d="M130 157h100" marker-start="url(#measure-arrow)" marker-end="url(#measure-arrow)"/>
-              <text x="180" y="172" text-anchor="middle" class="measure-label">轮辐开口宽度</text>
-            </svg>
+          <div>
+            <p class="clip-group-note" style="margin-bottom:7px">卡扣连接方式</p>
+            <div class="mode-switch" role="radiogroup" aria-label="卡扣连接方式">
+              <label><input type="radio" name="attachmentMode" value="integrated" checked><span>原一体爪钩</span></label>
+              <label><input type="radio" name="attachmentMode" value="detachable"><span>可拆卸卡扣</span></label>
+            </div>
+          </div>
+          <div id="detachableSettings" hidden>
+            <p class="control-note">盖板只保留刚性滑槽、挡墙和侧面锁窗；止退舌与可更换卡扣一体打印。仍是两爪穿同一开口、向外挂边，不改变原有卡轮方式。</p>
+            <div class="control"><label for="mountClearance">滑槽单侧配合间隙</label><input id="mountClearance" type="number" min="0.15" max="0.6" step="0.05" value="0.3"><input data-pair="mountClearance" type="range" min="0.15" max="0.6" step="0.05" value="0.3"><p class="control-note">只调安装脚与滑槽的间隙，与轮辐开口间隙独立；建议先下载卡扣与小型试装座配对试印。</p></div>
+            <div class="position-readout">
+              <div><span>安装头占用深度</span><strong id="mountDepth">—</strong></div>
+              <div><span>止退舌预计应变</span><strong id="latchStrain">—</strong></div>
+              <div class="wide"><span>自动安装头尺寸</span><strong id="mountDimensions">—</strong></div>
+            </div>
+            <p class="control-note">从圆心向外滑入，到挡墙后舌头卡入侧窗。更换前先将整盖从车轮拆下，用薄片工具从侧窗按回舌头、向圆心滑出。卡扣单独侧放导出；检查层纹、支撑与打印平台接触面积。仅为 PETG 非承力装饰方案，必须试装并检查拉脱、振动、疲劳与车轮干涉。</p>
           </div>
           <div class="control"><label for="clipRadius">中心到卡扣距离</label><input id="clipRadius" type="number" min="20" max="150" step="0.5" value="70"><input data-pair="clipRadius" type="range" min="20" max="150" step="0.5" value="70"></div>
           <div class="control"><label for="clipCount">候选卡扣组数</label><input id="clipCount" type="number" min="3" max="12" step="1" value="5"><input data-pair="clipCount" type="range" min="3" max="12" step="1" value="5"></div>
-          <div class="control"><label for="startAngle">卡扣起始角度</label><input id="startAngle" type="number" min="-180" max="180" step="1" value="0"><input data-pair="startAngle" type="range" min="-180" max="180" step="1" value="0"></div>
           <div class="control"><label for="openingWidth">轮辐开口宽度</label><input id="openingWidth" type="number" min="8" max="80" step="0.5" value="24"><input data-pair="openingWidth" type="range" min="8" max="80" step="0.5" value="24"><p class="control-note">在卡扣安装半径处，测量相邻两根轮辐之间可贯穿的净宽；一组双爪会从这个开口共同穿入。</p></div>
           <div class="control"><label for="spokeBackDepth">卡扣总深度</label><input id="spokeBackDepth" type="number" min="8" max="50" step="0.5" value="20"><input data-pair="spokeBackDepth" type="range" min="8" max="50" step="0.5" value="20"><p class="control-note">从轮毂盖背面量到轮辐最背面；已包含中心轴帽高差和轮辐前部的全部空隙。</p></div>
           <p class="control-note">适用前提：开口背面的左右边缘都必须有连续、可承力的挂边，并且不能被加强筋或轴帽挡住。</p>
@@ -541,7 +488,7 @@
           <div class="clip-group-picker" id="clipGroupPicker" aria-label="逐组启用或删除卡扣"></div>
           <p class="clip-group-note">点击编号可删除或恢复该组双爪；为避免脱落，至少保留 3 组。</p>
         </div>
-      </section>
+      </details>
 
       <details class="section">
         <summary>卡爪微调 <span id="clipDetailStatus" style="float:none;margin-left:8px;color:var(--teal);font:9px var(--mono)">跟随预设</span></summary>
@@ -555,30 +502,61 @@
         </div>
       </details>
 
-      <section class="section">
-        <div class="section-heading"><strong>正面图案</strong><span>03 / PATTERN</span></div>
+      <details class="section" open>
+        <summary class="section-heading"><strong>正面图案</strong><span>03 / PATTERN</span></summary>
         <div class="section-body">
           <label class="upload-zone" id="uploadZone">
             <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp">
             <span class="upload-icon">↑</span>
-            <span><strong>上传黑白图案</strong><small id="uploadName">可选；图片始终只在本机处理</small></span>
+            <span><strong id="uploadTitle">上传黑白图案</strong><small id="uploadName">可选；图片始终只在本机处理</small></span>
           </label>
-          <div class="mode-switch" role="radiogroup" aria-label="图案建模方式">
+          <div class="mode-switch mode-three" role="radiogroup" aria-label="图案建模方式">
             <label><input type="radio" name="patternMode" value="cut" checked><span>贯穿镂空</span></label>
             <label><input type="radio" name="patternMode" value="relief"><span>浅浮雕</span></label>
+            <label><input type="radio" name="patternMode" value="color"><span>实体盘多色</span></label>
+          </div>
+          <div class="color-settings" id="colorSettings" hidden>
+            <div class="mode-switch" role="radiogroup" aria-label="实体盘上色方式">
+              <label><input type="radio" name="colorStyle" value="palette" checked><span>图片自动分色</span></label>
+              <label><input type="radio" name="colorStyle" value="outline"><span>双色描线</span></label>
+            </div>
+            <label class="color-input-row"><span>背景底色</span><input id="baseColor" type="color" value="#f4f0e7"></label>
+            <div class="control"><label for="colorLayerHeight">齐平嵌色层厚度</label><input id="colorLayerHeight" type="number" min="0.2" max="0.8" step="0.2" value="0.4"><input data-pair="colorLayerHeight" type="range" min="0.2" max="0.8" step="0.2" value="0.4"><p class="control-note">从盖板最顶层向下嵌入，总厚度不变；默认两层 0.2 mm 层高。</p></div>
+            <div class="color-subpanel" id="paletteSettings">
+              <div class="control"><label for="colorCount">总颜色数（含底色）</label><input id="colorCount" type="number" min="2" max="8" step="1" value="4"><input data-pair="colorCount" type="range" min="2" max="8" step="1" value="4"></div>
+              <div class="control"><label for="minColorFeature">最小色块宽度</label><input id="minColorFeature" type="number" min="0.4" max="2" step="0.1" value="0.8"><input data-pair="minColorFeature" type="range" min="0.4" max="2" step="0.1" value="0.8"><p class="control-note">自动合并喷嘴难以稳定打印的碎小色块。</p></div>
+              <div class="palette-grid" id="paletteGrid" aria-label="打印色板"></div>
+              <div class="pattern-actions"><button class="pattern-action" id="reextractColors" type="button">重新从图片取色</button></div>
+            </div>
+            <div class="color-subpanel" id="outlineSettings" hidden>
+              <div>
+                <p class="clip-group-note" style="margin-bottom:7px">描线来源</p>
+                <div class="mode-switch mode-three" role="radiogroup" aria-label="描线来源">
+                  <label><input type="radio" name="outlineSource" value="auto" checked><span>自动识别</span></label>
+                  <label><input type="radio" name="outlineSource" value="line"><span>深色线稿</span></label>
+                  <label><input type="radio" name="outlineSource" value="edge"><span>照片边缘</span></label>
+                </div>
+              </div>
+              <div class="control"><label for="outlineWidth">描线宽度</label><input id="outlineWidth" type="number" min="0.8" max="3" step="0.1" value="1.2"><input data-pair="outlineWidth" type="range" min="0.8" max="3" step="0.1" value="1.2"></div>
+              <div class="control"><label for="edgeSensitivity">边缘灵敏度</label><input id="edgeSensitivity" type="number" min="20" max="90" step="1" value="55"><input data-pair="edgeSensitivity" type="range" min="20" max="90" step="1" value="55"></div>
+              <div class="control"><label for="outlineClose">断线连接</label><input id="outlineClose" type="number" min="0" max="6" step="1" value="2"><input data-pair="outlineClose" type="range" min="0" max="6" step="1" value="2"></div>
+              <div class="control"><label for="outlineCleanup">杂线清理</label><input id="outlineCleanup" type="number" min="0" max="8" step="1" value="2"><input data-pair="outlineCleanup" type="range" min="0" max="8" step="1" value="2"></div>
+              <div class="control"><label for="outlineSmoothing">描线平滑</label><input id="outlineSmoothing" type="number" min="0" max="4" step="1" value="1"><input data-pair="outlineSmoothing" type="range" min="0" max="4" step="1" value="1"></div>
+              <p class="paint-note">PETG 上色前建议轻度打磨或使用塑料底漆，并先做小面积附着测试。</p>
+            </div>
           </div>
           <p class="control-note" id="patternStatus">未上传图案，将使用默认放射镂空。</p>
           <div class="pattern-row">
             <div class="pattern-editor" id="patternEditor">
               <div class="pattern-view-tabs" role="tablist" aria-label="图案预览模式">
                 <button type="button" data-pattern-view="source">原图</button>
-                <button class="active" type="button" data-pattern-view="mask">镂空编辑</button>
+                <button class="active" id="patternEditTabLabel" type="button" data-pattern-view="mask">镂空编辑</button>
               </div>
               <div class="pattern-canvas-wrap" id="patternCanvasWrap" data-view="mask">
                 <canvas id="patternCanvas" width="512" height="512" aria-label="可编辑的镂空图案"></canvas>
               </div>
-              <div class="pattern-legend"><span class="cut">镂空</span><span class="solid">保留实体</span><span class="island">未连接孤岛</span></div>
-              <div class="pattern-tools" role="toolbar" aria-label="镂空编辑工具">
+              <div class="pattern-legend hollow" id="patternLegend"><span class="cut">镂空</span><span class="solid">保留实体</span><span class="island">未连接孤岛</span></div>
+              <div class="pattern-tools" id="patternTools" role="toolbar" aria-label="镂空编辑工具">
                 <button class="pattern-tool" id="movePattern" type="button" data-pattern-tool="move" aria-pressed="false">移动图案</button>
                 <button class="pattern-tool active" id="cutBrush" type="button" data-pattern-tool="cut" aria-pressed="true">增加镂空</button>
                 <button class="pattern-tool" id="smoothCutBrush" type="button" data-pattern-tool="smoothCut" aria-pressed="false">平滑镂空</button>
@@ -606,8 +584,8 @@
             </div>
           </div>
           <div class="control"><label for="patternRotation">图案旋转</label><input id="patternRotation" type="number" min="-180" max="180" step="1" value="0"><input data-pair="patternRotation" type="range" min="-180" max="180" step="1" value="0"><p class="control-note">围绕图案自身中心旋转，可配合移动和缩放避开背面的卡爪根部。</p></div>
-          <div class="control"><label for="patternScale">图案比例</label><input id="patternScale" type="number" min="30" max="100" step="1" value="100"><input data-pair="patternScale" type="range" min="30" max="100" step="1" value="100"><p class="control-note">相对于外圈以内可用图案区域的占比；围绕当前图案中心缩放，不影响外圈和卡爪根部保护区。</p></div>
-          <details class="section" style="margin:0">
+          <div class="control"><label for="patternScale">图案比例</label><input id="patternScale" type="number" min="30" max="100" step="1" value="100"><input data-pair="patternScale" type="range" min="30" max="100" step="1" value="100"><p class="control-note" id="patternScaleNote">相对于外圈以内可用图案区域的占比；围绕当前图案中心缩放，不影响外圈和卡爪根部保护区。</p></div>
+          <details class="section binary-only" id="binaryAdjustments" style="margin:0">
             <summary>图案微调</summary>
             <div class="section-body">
               <div class="control"><label for="threshold">黑白阈值</label><input id="threshold" type="number" min="20" max="235" step="1" value="128"><input data-pair="threshold" type="range" min="20" max="235" step="1" value="128"></div>
@@ -622,7 +600,7 @@
             </div>
           </details>
         </div>
-      </section>
+      </details>
 
       <div class="export-dock">
         <div class="export-status"><span>结构检查</span><strong id="qualityStatus">正在计算</strong></div>
@@ -630,7 +608,9 @@
           <button class="export-button" id="downloadStl" type="button">下载 STL</button>
           <button class="export-button secondary" id="download3mf" type="button">下载 3MF</button>
           <button class="export-button trial" id="downloadTrialStl" type="button">下载单组向外双爪 STL · 含圆底座</button>
+          <button class="export-button secondary trial" id="downloadSocketStl" type="button" hidden>下载小型试装座 STL</button>
         </div>
+        <p class="export-note" id="detachableExportNote" hidden>分体模式：卡扣 STL 为单只，需按启用数量打印；分件 3MF 已包含盖板、固定座和全部卡扣，并将它们分开摆放。不要重新合并成一体；注意排版可能超过打印平台范围。</p>
         <p class="export-note" id="qualityDetail">导出前请先打印小样验证开口宽度、背面挂边、拉脱力与车轮干涉。</p>
       </div>
     </aside>
@@ -642,6 +622,7 @@
           <button class="view-button" data-view="front" type="button">正面</button>
           <button class="view-button" data-view="back" type="button">背面</button>
           <button class="view-button" data-view="section" type="button">装配剖面</button>
+          <label id="attachmentPreviewControl" hidden>分件查看 <select id="attachmentPreview" aria-label="可拆结构预览"><option value="assembled">装配位置</option><option value="cover">盖板与固定座</option><option value="clip">单只卡扣与止退舌</option></select></label>
         </div>
         <div class="toolbar-meta"><span>拖动旋转 · 滚轮缩放</span><button class="reset-button" id="resetView" type="button">复位视角</button></div>
       </div>
@@ -649,7 +630,7 @@
         <canvas id="previewCanvas" aria-label="可旋转的轮毂盖三维预览"></canvas>
         <span class="canvas-title">Hubcap assembly study</span>
         <span class="edge-measure" id="edgeMeasure">外圈保留 8.0 mm</span>
-        <span class="canvas-hint">橙色：轮毂盖与向外双爪 / 青色：参考开口左右边缘（不导出）</span>
+        <span class="canvas-hint" id="canvasHint">橙色：轮毂盖与向外双爪 / 青色：参考开口左右边缘（不导出）</span>
       </div>
       <div class="metrics">
         <div class="metric"><span>成品外径</span><strong id="metricDiameter">200.0 mm</strong></div>
@@ -672,30 +653,41 @@
       validateTrialClip,
       buildHubcapGeometry,
       buildTrialClipGeometry,
+      buildSocketTrialGeometry,
       trialBaseRadius
-    } from "./轮毂盖几何.js";
+    } from "./轮毂盖几何.js?v=detachable-2";
 
     const $ = (selector) => document.querySelector(selector);
     const $$ = (selector) => [...document.querySelectorAll(selector)];
-    const configStorageKey = "hubcap-generator-configs-v2";
+    const configStorageKey = "hubcap-generator-configs-v3";
     const legacyConfigStorageKey = "hubcap-generator-config-v1";
+    const legacyConfigStorageKeyV2 = "hubcap-generator-configs-v2";
     const savedControlIds = [
       "coverDiameter", "coverThickness", "skirtHeight", "skirtThickness",
-      "clipRadius", "clipCount", "startAngle", "openingWidth", "spokeBackDepth",
+      "clipRadius", "clipCount", "openingWidth", "spokeBackDepth",
       "contactLength", "legThickness", "sideClearance", "hookReach", "rootHeight",
+      "mountClearance",
       "patternScale", "threshold", "samplingResolution", "cleanup", "closeStrength",
-      "minHoleArea", "hollowExpansion", "smoothing", "reliefHeight", "brushSize"
+      "minHoleArea", "hollowExpansion", "smoothing", "reliefHeight", "brushSize",
+      "colorLayerHeight", "colorCount", "minColorFeature", "outlineWidth",
+      "edgeSensitivity", "outlineClose", "outlineCleanup", "outlineSmoothing"
     ];
     const controls = {
       configStatus: $("#configStatus"), configName: $("#configName"), configList: $("#configList"), saveConfig: $("#saveConfig"), loadConfig: $("#loadConfig"),
       coverDiameter: $("#coverDiameter"), coverThickness: $("#coverThickness"), skirtHeight: $("#skirtHeight"), skirtThickness: $("#skirtThickness"),
-      clipRadius: $("#clipRadius"), clipCount: $("#clipCount"), startAngle: $("#startAngle"), openingWidth: $("#openingWidth"),
+      clipRadius: $("#clipRadius"), clipCount: $("#clipCount"), openingWidth: $("#openingWidth"),
       spokeBackDepth: $("#spokeBackDepth"),
       contactLength: $("#contactLength"), legThickness: $("#legThickness"), sideClearance: $("#sideClearance"),
       hookReach: $("#hookReach"), rootHeight: $("#rootHeight"), clipDetailStatus: $("#clipDetailStatus"),
+      detachableSettings: $("#detachableSettings"), mountClearance: $("#mountClearance"), mountDepth: $("#mountDepth"), latchStrain: $("#latchStrain"), mountDimensions: $("#mountDimensions"),
+      attachmentPreview: $("#attachmentPreview"), attachmentPreviewControl: $("#attachmentPreviewControl"), detachableExportNote: $("#detachableExportNote"), downloadSocketStl: $("#downloadSocketStl"),
       patternRotation: $("#patternRotation"), patternScale: $("#patternScale"), threshold: $("#threshold"), samplingResolution: $("#samplingResolution"), cleanup: $("#cleanup"), closeStrength: $("#closeStrength"), minHoleArea: $("#minHoleArea"), hollowExpansion: $("#hollowExpansion"), smoothing: $("#smoothing"), invertPattern: $("#invertPattern"), reliefHeight: $("#reliefHeight"),
-      imageInput: $("#imageInput"), uploadZone: $("#uploadZone"), uploadName: $("#uploadName"), patternCanvas: $("#patternCanvas"),
+      colorSettings: $("#colorSettings"), paletteSettings: $("#paletteSettings"), outlineSettings: $("#outlineSettings"), baseColor: $("#baseColor"), colorLayerHeight: $("#colorLayerHeight"), colorCount: $("#colorCount"), minColorFeature: $("#minColorFeature"), paletteGrid: $("#paletteGrid"),
+      reextractColors: $("#reextractColors"),
+      outlineWidth: $("#outlineWidth"), edgeSensitivity: $("#edgeSensitivity"), outlineClose: $("#outlineClose"), outlineCleanup: $("#outlineCleanup"), outlineSmoothing: $("#outlineSmoothing"), binaryAdjustments: $("#binaryAdjustments"),
+      imageInput: $("#imageInput"), uploadZone: $("#uploadZone"), uploadTitle: $("#uploadTitle"), uploadName: $("#uploadName"), patternCanvas: $("#patternCanvas"),
       patternCanvasWrap: $("#patternCanvasWrap"), patternEditor: $("#patternEditor"), patternStatus: $("#patternStatus"), reliefControl: $("#reliefControl"), previewCanvas: $("#previewCanvas"),
+      patternEditTabLabel: $("#patternEditTabLabel"), patternLegend: $("#patternLegend"), patternTools: $("#patternTools"), patternScaleNote: $("#patternScaleNote"), canvasHint: $("#canvasHint"),
       movePattern: $("#movePattern"), cutBrush: $("#cutBrush"), smoothCutBrush: $("#smoothCutBrush"), solidBrush: $("#solidBrush"), bridgeBrush: $("#bridgeBrush"), brushSize: $("#brushSize"), brushSizeLabel: $("#brushSizeLabel"), brushSizeRow: $("#brushSizeRow"),
       patternOffsetReadout: $("#patternOffsetReadout"), centerPattern: $("#centerPattern"),
       undoPattern: $("#undoPattern"), redoPattern: $("#redoPattern"), clearPatternEdits: $("#clearPatternEdits"), expandPatternEditor: $("#expandPatternEditor"),
@@ -712,6 +704,11 @@
       sourcePreview: null,
       baseMask: null,
       mask: null,
+      colorBaseMask: null,
+      colorMask: null,
+      colorPalette: ["#f4f0e7", "#20221f", "#e65f34", "#2e7771"],
+      activeColorIndex: 1,
+      paletteUserEdited: false,
       solidIslands: [],
       exteriorSolid: null,
       selectedIsland: 0,
@@ -728,6 +725,12 @@
       mesh: null,
       exportTriangles: [],
       exportMesh: null,
+      materialParts: [],
+      clipParts: [],
+      clipSample: null,
+      assembledTriangles: [],
+      coverTriangles: [],
+      previewRadius: 100,
       referenceTriangles: [],
       validation: { valid: true, errors: [], warnings: [] },
       gl: null,
@@ -746,12 +749,15 @@
       geometryError: null,
       geometryReport: null,
       geometryVerification: null,
+      multicolorCoordinateWarnings: 0,
       buildRevision: 0
     };
+    const defaultPrintColors = ["#f4f0e7", "#20221f", "#e65f34", "#2e7771", "#e9b949", "#4169a1", "#a64d79", "#72a75a"];
 
     function numberValue(control) { return Number(control.value); }
     function currentMode() { return $("input[name='patternMode']:checked").value; }
     function selectedPreset(name) { return $(`input[name='${name}']:checked`).value; }
+    function currentColorStyle() { return selectedPreset("colorStyle"); }
     function currentPatternScale() { return Math.max(.3, Math.min(1, numberValue(controls.patternScale) / 100)); }
     function currentPatternSmoothing() { return Math.max(0, Math.min(8, Math.round(numberValue(controls.smoothing)))); }
 
@@ -760,19 +766,24 @@
         const stored = localStorage.getItem(configStorageKey);
         if (stored) {
           const store = JSON.parse(stored);
-          if (store?.version === 2 && Array.isArray(store.configs)) return store;
+          if (store?.version === 3 && Array.isArray(store.configs)) return store;
+        }
+        const storedV2 = localStorage.getItem(legacyConfigStorageKeyV2);
+        if (storedV2) {
+          const store = JSON.parse(storedV2);
+          if (store?.version === 2 && Array.isArray(store.configs)) return { version:3, configs:store.configs };
         }
         const legacy = localStorage.getItem(legacyConfigStorageKey);
         if (legacy) {
           const config = JSON.parse(legacy);
           if (config?.version === 1 && config.values) {
-            return { version:2, configs:[{ ...config, id:"legacy-v1", name:"原有配置" }] };
+            return { version:3, configs:[{ ...config, id:"legacy-v1", name:"原有配置" }] };
           }
         }
       } catch {
         // 本地存储被清理或不可用时，按空配置处理。
       }
-      return { version:2, configs:[] };
+      return { version:3, configs:[] };
     }
 
     function selectedSavedConfig(store = readConfigStore()) {
@@ -814,8 +825,12 @@
         radios: {
           strengthPreset:selectedPreset("strengthPreset"),
           fitPreset:selectedPreset("fitPreset"),
-          patternMode:currentMode()
+          attachmentMode:selectedPreset("attachmentMode"),
+          patternMode:currentMode(),
+          colorStyle:currentColorStyle(),
+          outlineSource:selectedPreset("outlineSource")
         },
+        colors:{ baseColor:controls.baseColor.value, palette:[...state.colorPalette] },
         invertPattern: controls.invertPattern.checked,
         customClipSettings: state.customClipSettings,
         activeClipGroups: [...state.activeClipGroups]
@@ -848,6 +863,8 @@
       state.sourcePreview = null;
       state.baseMask = null;
       state.mask = null;
+      state.colorBaseMask = null;
+      state.colorMask = null;
       state.solidIslands = [];
       state.exteriorSolid = null;
       state.selectedIsland = 0;
@@ -871,10 +888,18 @@
       const config = selectedSavedConfig();
       if (!config) return showToast("当前浏览器没有已保存参数");
       savedControlIds.forEach((id) => restoreSavedValue(id, config.values[id]));
+      // 老配置没有连接方式时始终回到原一体结构，不继承上一次的可拆选择。
+      $('input[name="attachmentMode"][value="integrated"]').checked = true;
+      restoreSavedValue("mountClearance", config.values.mountClearance ?? .3);
       Object.entries(config.radios || {}).forEach(([name, value]) => {
         const input = $(`input[name="${name}"][value="${value}"]`);
         if (input) input.checked = true;
       });
+      controls.baseColor.value = /^#[0-9a-f]{6}$/i.test(config.colors?.baseColor || "") ? config.colors.baseColor : "#f4f0e7";
+      state.colorPalette = Array.isArray(config.colors?.palette) && config.colors.palette.length >= 2
+        ? config.colors.palette.filter((color) => /^#[0-9a-f]{6}$/i.test(color)).slice(0, 8)
+        : [controls.baseColor.value, "#20221f", "#e65f34", "#2e7771"];
+      state.colorPalette[0] = controls.baseColor.value;
       controls.invertPattern.checked = Boolean(config.invertPattern);
       resetClipGroups(numberValue(controls.clipCount));
       const savedGroups = Array.isArray(config.activeClipGroups) ? config.activeClipGroups : [];
@@ -884,6 +909,7 @@
       controls.clipDetailStatus.textContent = state.customClipSettings ? "自定义" : "跟随预设";
       controls.reliefControl.hidden = currentMode() !== "relief";
       clearSavedPattern();
+      syncModeUi();
       processImage();
       controls.configName.value = config.name;
       updateConfigStore(config.id);
@@ -899,13 +925,15 @@
         rootHeight:numberValue(controls.rootHeight)
       } : null;
       return deriveStructure({
+        attachmentMode:selectedPreset("attachmentMode"),
+        mountClearance:numberValue(controls.mountClearance),
         coverDiameter:numberValue(controls.coverDiameter),
         coverThickness:numberValue(controls.coverThickness),
         skirtHeight:numberValue(controls.skirtHeight),
         skirtThickness:numberValue(controls.skirtThickness),
         clipRadius:numberValue(controls.clipRadius),
         clipCount:Math.round(numberValue(controls.clipCount)),
-        startAngle:numberValue(controls.startAngle) * Math.PI / 180,
+        startAngle:0,
         openingWidth:numberValue(controls.openingWidth),
         spokeBackDepth:numberValue(controls.spokeBackDepth),
         strengthPreset:selectedPreset("strengthPreset"),
@@ -921,6 +949,10 @@
         minHoleArea:numberValue(controls.minHoleArea),
         hollowExpansion:numberValue(controls.hollowExpansion),
         reliefHeight:numberValue(controls.reliefHeight),
+        colorStyle:currentColorStyle(),
+        colorLayerHeight:numberValue(controls.colorLayerHeight),
+        colorPalette:[...state.colorPalette],
+        minColorFeature:numberValue(controls.minColorFeature),
         mode:currentMode()
       }, custom);
     }
@@ -961,17 +993,28 @@
         state.geometryReport = geometry.report;
         state.geometryVerification = geometry.verification;
         state.validation = validateDesign(p, activeIndices, state.geometryReport);
-        state.exportTriangles = geometry.bodyTriangles;
+        state.exportTriangles = geometry.exportTriangles || geometry.bodyTriangles;
         state.exportMesh = geometry.exportMesh;
+        state.materialParts = geometry.materialParts || [];
+        state.multicolorCoordinateWarnings = state.materialParts.reduce((sum, part) => sum + (part.verification.geometricEdgeWarnings || 0), 0);
+        state.clipParts = geometry.clipParts || [];
+        state.clipSample = geometry.clipSample || null;
+        state.assembledTriangles = geometry.bodyTriangles;
+        state.coverTriangles = geometry.coverTriangles || geometry.bodyTriangles;
         state.referenceTriangles = geometry.referenceTriangles;
-        state.bodyVertexCount = geometry.bodyTriangles.length * 3;
-        state.mesh = makeRenderData([...geometry.bodyTriangles, ...geometry.referenceTriangles]);
+        updatePreviewMesh();
       } catch (error) {
         if (revision !== state.buildRevision) return;
         state.geometryError = error instanceof Error ? error.message : String(error);
         state.validation = { valid:false, errors:[`实体合并失败：${state.geometryError}`], warnings:[] };
         state.exportTriangles = [];
         state.exportMesh = null;
+        state.materialParts = [];
+        state.multicolorCoordinateWarnings = 0;
+        state.clipParts = [];
+        state.clipSample = null;
+        state.assembledTriangles = [];
+        state.coverTriangles = [];
         state.referenceTriangles = [];
         state.bodyVertexCount = 0;
         state.mesh = makeRenderData([]);
@@ -993,37 +1036,82 @@
       return new Float32Array(values);
     }
 
+    function updatePreviewMesh() {
+      const p = params();
+      const view = p.mount ? controls.attachmentPreview.value : "assembled";
+      let triangles = view === "cover" ? state.coverTriangles : state.assembledTriangles;
+      state.previewRadius = p.coverDiameter / 2;
+      if (view === "clip" && state.clipSample) {
+        const bounds = state.clipSample.verification.bounds;
+        const centerZ = (bounds.min[2] + bounds.max[2]) / 2;
+        triangles = state.clipSample.triangles.map((triangle) => ({
+          ...triangle,
+          ...Object.fromEntries(["a","b","c"].map((key) => [key, { ...triangle[key], z:triangle[key].z-centerZ }]))
+        }));
+        state.previewRadius = Math.max(...bounds.max.map((value, index) => value-bounds.min[index])) * .7;
+      }
+      state.bodyVertexCount = triangles.length * 3;
+      state.mesh = makeRenderData([...triangles, ...(view === "assembled" ? state.referenceTriangles : [])]);
+    }
+
     function updateReadouts(p) {
       const m = clipMetrics(p, activeClipIndices(p));
       syncCustomControls(p);
+      const detachable = Boolean(p.mount);
+      controls.detachableSettings.hidden = !detachable;
+      controls.attachmentPreviewControl.hidden = !detachable;
+      controls.detachableExportNote.hidden = !detachable;
+      controls.downloadStl.hidden = detachable;
+      controls.download3mf.classList.toggle("wide", detachable);
+      controls.downloadSocketStl.hidden = !detachable;
+      if (detachable) {
+        controls.mountDepth.textContent = `${p.mount.rootOffset.toFixed(2)} mm`;
+        controls.latchStrain.textContent = `${p.mount.latchStrain.toFixed(2)}%`;
+        controls.mountDimensions.textContent = `安装脚 ${p.mount.length.toFixed(1)} × ${p.mount.footWidth.toFixed(1)} × ${p.mount.footThickness.toFixed(1)} mm · 槽壁 ${p.mount.wall.toFixed(1)} · 舌厚 ${p.mount.tongueThickness.toFixed(1)} · 锁入 ${p.mount.catchReach.toFixed(2)}`;
+      }
+      controls.canvasHint.textContent = detachable
+        ? p.mode === "color" ? "盖板保留分色 / 橙色：可更换卡扣 / 半透明：参考轮辐（不导出）" : "青绿：盖板与刚性固定座 / 橙色：可更换卡扣 / 半透明：参考轮辐（不导出）"
+        : p.mode === "color" ? "彩色：齐平嵌色顶层 / 青色：参考轮辐边缘（不导出）" : "橙色：轮毂盖与向外双爪 / 青色：参考开口左右边缘（不导出）";
       controls.activeClipCount.textContent = `${m.enabled} / ${p.clipCount} 组`;
       controls.jawOpening.textContent = `${m.jawOuterSpan.toFixed(2)} mm`;
       controls.clipStrain.textContent = `${p.estimatedStrain.toFixed(2)}%`;
       const skirtText = p.skirtHeight > 0 ? `裙边 ${p.skirtHeight.toFixed(1)} × ${p.skirtThickness.toFixed(1)}` : "无裙边";
       controls.autoDimensions.textContent = `板 ${p.coverThickness.toFixed(1)} · ${skirtText} · 圈 ${p.outerRingWidth.toFixed(1)} · 爪根/末 ${p.legThickness.toFixed(1)}/${p.tipThickness.toFixed(1)} · 外勾 ${p.hookReach.toFixed(2)} · 钩高 ${p.hookHeight.toFixed(2)} · 坡度 ${p.insertionAngle.toFixed(0)}°`;
-      controls.edgeMeasure.textContent = `外圈保留 ${p.outerRingWidth.toFixed(1)} mm`;
+      controls.edgeMeasure.textContent = p.mode === "color" ? `齐平嵌色层 ${p.colorLayerHeight.toFixed(1)} mm` : `外圈保留 ${p.outerRingWidth.toFixed(1)} mm`;
       controls.metricDiameter.textContent = `${p.coverDiameter.toFixed(1)} mm`;
       const rearProjection = Math.max(p.spokeBackDepth + p.hookHeight, p.skirtHeight);
       controls.metricHeight.textContent = `${(rearProjection + p.coverThickness + (p.mode === "relief" ? p.reliefHeight : 0)).toFixed(1)} mm`;
       controls.metricClips.textContent = `${m.enabled} / ${p.clipCount} 组`;
       controls.metricTriangles.textContent = state.geometryVerification
-        ? `封闭 · ${state.geometryVerification.triangleCount.toLocaleString()} triangles`
+        ? `封闭 · ${(p.mode === "color" || detachable ? state.assembledTriangles.length : state.geometryVerification.triangleCount).toLocaleString()} triangles`
         : (state.geometryBuilding ? "正在生成…" : "—");
       renderClipGroupPicker(p);
       const validation = state.validation;
       const exportReady = validation.valid && !state.geometryBuilding && Boolean(state.geometryVerification);
+      const detachableColorUnsafe = detachable && p.mode === "color" && state.multicolorCoordinateWarnings > 0;
       controls.downloadStl.disabled = !exportReady;
-      controls.download3mf.disabled = !exportReady;
+      controls.download3mf.disabled = !exportReady || detachableColorUnsafe;
       controls.downloadTrialStl.disabled = !state.geometryReady || !validateTrialClip(p).valid;
-      controls.downloadTrialStl.textContent = `下载单组向外双爪 STL · 圆底座 Ø${(trialBaseRadius(p) * 2).toFixed(1)} mm`;
-      controls.qualityStatus.classList.toggle("error", !validation.valid || Boolean(state.geometryError));
+      controls.downloadSocketStl.disabled = !state.geometryReady || !validateTrialClip(p).valid;
+      controls.downloadStl.textContent = detachable ? (p.mode === "color" ? "下载盖板 STL（无色）" : "下载盖板 STL") : p.mode === "color" ? "下载单色备用 STL" : "下载 STL";
+      controls.download3mf.textContent = detachable ? "下载分件 3MF" : "下载 3MF";
+      controls.downloadTrialStl.textContent = detachable ? `下载单只可更换卡扣 STL · 需打印 ${m.enabled} 只` : `下载单组向外双爪 STL · 圆底座 Ø${(trialBaseRadius(p) * 2).toFixed(1)} mm`;
+      if (detachable) controls.downloadSocketStl.textContent = `下载小型试装座 STL · 圆底座 Ø${(trialBaseRadius(p)*2).toFixed(1)} mm`;
+      controls.qualityStatus.classList.toggle("error", !validation.valid || Boolean(state.geometryError) || detachableColorUnsafe);
       if (state.geometryBuilding) controls.qualityStatus.textContent = "正在生成封闭实体";
       else if (!validation.valid) controls.qualityStatus.textContent = `${validation.errors.length} 项需修正`;
+      else if (detachableColorUnsafe) controls.qualityStatus.textContent = "多色边界需调整 · 3MF 暂不可用";
+      else if (detachable) controls.qualityStatus.textContent = `盖板＋${m.enabled} 只卡扣 · 分件封闭`;
+      else if (p.mode === "color") controls.qualityStatus.textContent = validation.warnings.length ? "分色封闭装配 · 有提示" : "分色封闭装配";
       else controls.qualityStatus.textContent = validation.warnings.length ? "单一封闭实体 · 有提示" : "单一封闭实体";
       const verificationText = state.geometryVerification
-        ? `Manifold ${state.geometryVerification.status} · 1 个组件 · 0 条非流形边 · 最小壁厚 ${p.minWall.toFixed(1)} mm`
+        ? detachable
+          ? `盖板与 ${state.clipParts.length} 只卡扣逐件封闭 · 0 条非流形边 · 装配无实体重叠${p.mode === "color" ? ` · 盖板含 ${state.materialParts.length} 个分色零件` : ""}`
+          : p.mode === "color"
+          ? `Manifold ${state.geometryVerification.status} · ${state.materialParts.length} 个封闭分色零件 · 母体 0 条非流形边 · 彩色层 ${p.colorLayerHeight.toFixed(1)} mm`
+          : `Manifold ${state.geometryVerification.status} · 1 个组件 · 0 条非流形边 · 最小壁厚 ${p.minWall.toFixed(1)} mm`
         : "";
-      controls.qualityDetail.textContent = validation.errors[0] || validation.warnings[0] || verificationText || "导出前请先打印小样验证开口宽度、背面挂边、拉脱力与车轮干涉。";
+      controls.qualityDetail.textContent = validation.errors[0] || (detachableColorUnsafe ? `多色色块存在 ${state.multicolorCoordinateWarnings} 处坐标闭边歧义，已阻止分件 3MF；请增大最小色块后重新生成。` : "") || validation.warnings[0] || verificationText || "导出前请先打印小样验证开口宽度、背面挂边、拉脱力与车轮干涉。";
     }
 
     function renderClipGroupPicker(p) {
@@ -1039,10 +1127,15 @@
 
     function scheduleRebuild() {
       clearTimeout(state.rebuildTimer);
+      state.buildRevision += 1;
+      state.geometryVerification = null;
+      state.geometryBuilding = true;
+      updateReadouts(params());
       state.rebuildTimer = setTimeout(() => { void rebuildMesh(); }, 120);
     }
 
     function patternAvailableSize() {
+      if (currentMode() === "color") return Math.max(8, numberValue(controls.coverDiameter));
       const p = deriveStructure({
         coverDiameter:numberValue(controls.coverDiameter),
         spokeBackDepth:numberValue(controls.spokeBackDepth),
@@ -1060,15 +1153,351 @@
       return `X ${state.patternOffsetX.toFixed(1)} · Y ${state.patternOffsetY.toFixed(1)} mm · 旋转 ${state.patternRotation.toFixed(0)}°`;
     }
 
+    function hexToRgb(hex) {
+      const value = /^#[0-9a-f]{6}$/i.test(hex || "") ? hex.slice(1) : "20221f";
+      return [0, 2, 4].map((offset) => parseInt(value.slice(offset, offset + 2), 16));
+    }
+
+    function rgbToHex(rgb) {
+      return `#${rgb.map((value) => Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, "0")).join("")}`;
+    }
+
+    function rgbToLab(rgb) {
+      const linear = rgb.map((value) => {
+        const channel = value / 255;
+        return channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4;
+      });
+      const x = (linear[0] * .4124 + linear[1] * .3576 + linear[2] * .1805) / .95047;
+      const y = (linear[0] * .2126 + linear[1] * .7152 + linear[2] * .0722);
+      const z = (linear[0] * .0193 + linear[1] * .1192 + linear[2] * .9505) / 1.08883;
+      const curve = (value) => value > .008856 ? Math.cbrt(value) : 7.787 * value + 16 / 116;
+      const fx = curve(x), fy = curve(y), fz = curve(z);
+      return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+    }
+
+    function labDistance(first, second) {
+      return (first[0] - second[0]) ** 2 + (first[1] - second[1]) ** 2 + (first[2] - second[2]) ** 2;
+    }
+
+    function nearestPaletteIndex(rgb, palette, startIndex = 1) {
+      const lab = rgbToLab(rgb);
+      let best = startIndex, bestDistance = Infinity;
+      for (let index = startIndex; index < palette.length; index += 1) {
+        const distance = labDistance(lab, rgbToLab(hexToRgb(palette[index])));
+        if (distance < bestDistance) { best = index; bestDistance = distance; }
+      }
+      return best;
+    }
+
+    function extractImagePalette(pixels, size, count) {
+      const stride = Math.max(1, Math.ceil(size / 160));
+      const samples = [];
+      const radiusSquared = (size * .5) ** 2;
+      for (let y = 0; y < size; y += stride) for (let x = 0; x < size; x += stride) {
+        if ((x - size / 2) ** 2 + (y - size / 2) ** 2 > radiusSquared) continue;
+        const offset = (y * size + x) * 4;
+        if (pixels.data[offset + 3] < 20) continue;
+        const rgb = [pixels.data[offset], pixels.data[offset + 1], pixels.data[offset + 2]];
+        samples.push({ rgb, lab:rgbToLab(rgb) });
+      }
+      if (!samples.length) return state.colorPalette.slice(1, count + 1);
+      samples.sort((first, second) => first.lab[0] - second.lab[0]);
+      const centers = Array.from({ length:count }, (_, index) => [...samples[Math.min(samples.length - 1, Math.floor((index + .5) * samples.length / count))].lab]);
+      for (let pass = 0; pass < 8; pass += 1) {
+        const sums = centers.map(() => [0, 0, 0, 0]);
+        samples.forEach((sample) => {
+          let best = 0, bestDistance = Infinity;
+          centers.forEach((center, index) => {
+            const distance = labDistance(sample.lab, center);
+            if (distance < bestDistance) { best = index; bestDistance = distance; }
+          });
+          sums[best][0] += sample.lab[0]; sums[best][1] += sample.lab[1]; sums[best][2] += sample.lab[2]; sums[best][3] += 1;
+        });
+        sums.forEach((sum, index) => { if (sum[3]) centers[index] = [sum[0] / sum[3], sum[1] / sum[3], sum[2] / sum[3]]; });
+      }
+      return centers.map((center) => {
+        let representative = samples[0], bestDistance = Infinity;
+        samples.forEach((sample) => {
+          const distance = labDistance(sample.lab, center);
+          if (distance < bestDistance) { representative = sample; bestDistance = distance; }
+        });
+        return rgbToHex(representative.rgb);
+      });
+    }
+
+    function transformedSourcePixels(size) {
+      const source = document.createElement("canvas");
+      source.width = source.height = size;
+      const sourceCtx = source.getContext("2d", { willReadFrequently:true });
+      const imageScale = Math.min(size / state.image.naturalWidth, size / state.image.naturalHeight);
+      const width = state.image.naturalWidth * imageScale, height = state.image.naturalHeight * imageScale;
+      sourceCtx.imageSmoothingEnabled = true;
+      sourceCtx.imageSmoothingQuality = "high";
+      sourceCtx.drawImage(state.image, (size - width) / 2, (size - height) / 2, width, height);
+      state.sourcePreview = source;
+      const transformed = document.createElement("canvas");
+      transformed.width = transformed.height = size;
+      const ctx = transformed.getContext("2d", { willReadFrequently:true });
+      ctx.translate(size / 2 + state.patternOffsetX / patternAvailableSize() * size, size / 2 - state.patternOffsetY / patternAvailableSize() * size);
+      ctx.rotate(-state.patternRotation * Math.PI / 180);
+      const targetSize = size * currentPatternScale();
+      ctx.drawImage(source, -targetSize / 2, -targetSize / 2, targetSize, targetSize);
+      return ctx.getImageData(0, 0, size, size);
+    }
+
+    function smoothColorLabels(labels, size, radius) {
+      const output = labels.slice(), center = (size - 1) / 2, radiusSquared = (size / 2) ** 2;
+      for (let y = 0; y < size; y += 1) for (let x = 0; x < size; x += 1) {
+        const index = y * size + x;
+        if ((x - center) ** 2 + (y - center) ** 2 > radiusSquared) { output[index] = 0; continue; }
+        const counts = new Uint16Array(state.colorPalette.length);
+        for (let oy = -radius; oy <= radius; oy += 1) for (let ox = -radius; ox <= radius; ox += 1) {
+          const px = x + ox, py = y + oy;
+          if (px >= 0 && px < size && py >= 0 && py < size) counts[labels[py * size + px]] += 1;
+        }
+        let best = labels[index];
+        for (let label = 0; label < counts.length; label += 1) if (counts[label] > counts[best]) best = label;
+        output[index] = best;
+      }
+      return output;
+    }
+
+    function collectColorComponents(labels, size) {
+      const componentAt = new Int32Array(labels.length); componentAt.fill(-1);
+      const queue = new Int32Array(labels.length), components = [];
+      for (let start = 0; start < labels.length; start += 1) {
+        if (componentAt[start] >= 0) continue;
+        const id = components.length, label = labels[start], pixels = [];
+        let head = 0, tail = 0;
+        queue[tail++] = start; componentAt[start] = id;
+        while (head < tail) {
+          const index = queue[head++], x = index % size, y = Math.floor(index / size);
+          pixels.push(index);
+          const neighbours = [x > 0 ? index - 1 : -1, x < size - 1 ? index + 1 : -1, y > 0 ? index - size : -1, y < size - 1 ? index + size : -1];
+          neighbours.forEach((next) => {
+            if (next >= 0 && componentAt[next] < 0 && labels[next] === label) { componentAt[next] = id; queue[tail++] = next; }
+          });
+        }
+        components.push({ id, label, pixels, neighbours:new Map() });
+      }
+      for (let y = 0; y < size; y += 1) for (let x = 0; x < size; x += 1) {
+        const index = y * size + x, id = componentAt[index];
+        [x < size - 1 ? index + 1 : -1, y < size - 1 ? index + size : -1].forEach((next) => {
+          if (next < 0) return;
+          const nextId = componentAt[next];
+          if (nextId === id) return;
+          components[id].neighbours.set(nextId, (components[id].neighbours.get(nextId) || 0) + 1);
+          components[nextId].neighbours.set(id, (components[nextId].neighbours.get(id) || 0) + 1);
+        });
+      }
+      return components;
+    }
+
+    function mergeSmallColorRegions(labels, size, minimumArea, maximumColorComponents = 240) {
+      for (let pass = 0; pass < 8; pass += 1) {
+        const components = collectColorComponents(labels, size);
+        const colorComponents = components.filter((component) => component.label > 0);
+        const targetIds = new Set(components.filter((component) => component.pixels.length < minimumArea).map((component) => component.id));
+        if (colorComponents.length > maximumColorComponents) {
+          colorComponents.sort((first, second) => first.pixels.length - second.pixels.length)
+            .slice(0, colorComponents.length - maximumColorComponents)
+            .forEach((component) => targetIds.add(component.id));
+        }
+        if (!targetIds.size) break;
+        let changed = false;
+        [...targetIds].sort((first, second) => components[first].pixels.length - components[second].pixels.length).forEach((id) => {
+          const component = components[id];
+          if (labels[component.pixels[0]] !== component.label) return;
+          const candidates = [...component.neighbours.entries()].map(([nextId, boundary]) => ({ component:components[nextId], boundary }))
+            .filter((candidate) => candidate.component.label !== component.label)
+            .sort((first, second) => second.component.pixels.length - first.component.pixels.length || second.boundary - first.boundary || first.component.id - second.component.id);
+          if (!candidates.length) return;
+          component.pixels.forEach((index) => { if (labels[index] === component.label) labels[index] = candidates[0].component.label; });
+          changed = true;
+        });
+        if (!changed) break;
+      }
+      return labels;
+    }
+
+    function detectOutlineMask(pixels, size) {
+      let luminance = new Float32Array(size * size);
+      let light = 0, dark = 0, opaque = 0;
+      for (let index = 0; index < luminance.length; index += 1) {
+        const offset = index * 4;
+        const value = pixels.data[offset] * .2126 + pixels.data[offset + 1] * .7152 + pixels.data[offset + 2] * .0722;
+        luminance[index] = value;
+        if (pixels.data[offset + 3] > 20) { opaque += 1; if (value > 220) light += 1; if (value < 90) dark += 1; }
+      }
+      const requested = selectedPreset("outlineSource");
+      const source = requested === "auto" && opaque ? (light / opaque > .55 && dark / opaque < .38 ? "line" : "edge") : requested;
+      let mask = new Uint8Array(size * size);
+      if (source === "line") {
+        const threshold = 80 + numberValue(controls.edgeSensitivity) * 1.45;
+        for (let index = 0; index < mask.length; index += 1) mask[index] = pixels.data[index * 4 + 3] > 20 && luminance[index] < threshold ? 1 : 0;
+      } else {
+        const blurred = luminance.slice();
+        for (let y = 1; y < size - 1; y += 1) for (let x = 1; x < size - 1; x += 1) {
+          let sum = 0;
+          for (let oy = -1; oy <= 1; oy += 1) for (let ox = -1; ox <= 1; ox += 1) sum += luminance[(y + oy) * size + x + ox];
+          blurred[y * size + x] = sum / 9;
+        }
+        const magnitude = new Float32Array(mask.length);
+        const high = 235 - numberValue(controls.edgeSensitivity) * 2.25, low = high * .45;
+        const weak = new Uint8Array(mask.length), queue = new Int32Array(mask.length);
+        let head = 0, tail = 0;
+        for (let y = 1; y < size - 1; y += 1) for (let x = 1; x < size - 1; x += 1) {
+          const i = y * size + x;
+          const gx = -blurred[i-size-1] - 2*blurred[i-1] - blurred[i+size-1] + blurred[i-size+1] + 2*blurred[i+1] + blurred[i+size+1];
+          const gy = -blurred[i-size-1] - 2*blurred[i-size] - blurred[i-size+1] + blurred[i+size-1] + 2*blurred[i+size] + blurred[i+size+1];
+          magnitude[i] = Math.hypot(gx, gy);
+          if (magnitude[i] >= high) { mask[i] = 1; queue[tail++] = i; }
+          else if (magnitude[i] >= low) weak[i] = 1;
+        }
+        while (head < tail) {
+          const index = queue[head++], x = index % size, y = Math.floor(index / size);
+          for (let oy = -1; oy <= 1; oy += 1) for (let ox = -1; ox <= 1; ox += 1) {
+            const next = (y + oy) * size + x + ox;
+            if (weak[next] && !mask[next]) { mask[next] = 1; queue[tail++] = next; }
+          }
+        }
+      }
+      const closeRadius = Math.ceil(numberValue(controls.outlineClose) / 2);
+      if (closeRadius) mask = closeMask(mask, size, size, closeRadius);
+      const cleanup = numberValue(controls.outlineCleanup);
+      if (cleanup) mask = removeSmallPatternComponents(mask, size, size, Math.max(2, Math.round((cleanup + 1) ** 2)));
+      const smoothing = numberValue(controls.outlineSmoothing);
+      if (smoothing) mask = smoothMask(mask, size, size, smoothing);
+      const pixelSize = numberValue(controls.coverDiameter) / size;
+      const radius = Math.max(0, Math.round(numberValue(controls.outlineWidth) / pixelSize / 2));
+      if (radius) mask = dilate(mask, size, size, radius);
+      return { mask, source };
+    }
+
+    function processColorImage() {
+      const size = controls.patternCanvas.width;
+      let labels = new Uint8Array(size * size);
+      let detectedSource = null;
+      if (state.image) {
+        const pixels = transformedSourcePixels(size);
+        if (currentColorStyle() === "outline") {
+          state.colorPalette = [controls.baseColor.value, "#181817"];
+          const result = detectOutlineMask(pixels, size);
+          detectedSource = result.source;
+          for (let index = 0; index < labels.length; index += 1) labels[index] = result.mask[index] ? 1 : 0;
+        } else {
+          const count = Math.max(2, Math.min(8, Math.round(numberValue(controls.colorCount))));
+          if (!state.paletteUserEdited || state.colorPalette.length !== count) {
+            state.colorPalette = [controls.baseColor.value, ...extractImagePalette(pixels, size, count - 1)];
+          } else state.colorPalette[0] = controls.baseColor.value;
+          for (let index = 0; index < labels.length; index += 1) {
+            const offset = index * 4;
+            labels[index] = pixels.data[offset + 3] < 20 ? 0 : nearestPaletteIndex([pixels.data[offset], pixels.data[offset + 1], pixels.data[offset + 2]], state.colorPalette);
+          }
+          const pixelSize = numberValue(controls.coverDiameter) / size;
+          const featurePixels = numberValue(controls.minColorFeature) / pixelSize;
+          labels = smoothColorLabels(labels, size, Math.max(1, Math.min(2, Math.floor(featurePixels / 2))));
+          labels = mergeSmallColorRegions(labels, size, Math.max(3, Math.round(featurePixels ** 2)));
+        }
+      } else {
+        state.sourcePreview = null;
+        if (currentColorStyle() === "outline") state.colorPalette = [controls.baseColor.value, "#181817"];
+        else {
+          const count = Math.max(2, Math.min(8, Math.round(numberValue(controls.colorCount))));
+          state.colorPalette = Array.from({ length:count }, (_, index) => index === 0 ? controls.baseColor.value : state.colorPalette[index] || defaultPrintColors[index]);
+        }
+      }
+      state.colorBaseMask = labels;
+      rebuildEditedMask(true);
+      renderPalette();
+      const styleText = currentColorStyle() === "outline"
+        ? `双色描线${detectedSource ? ` · ${detectedSource === "line" ? "深色线稿" : "照片边缘"}` : ""}`
+        : `${state.colorPalette.length} 色自动分色`;
+      controls.patternStatus.textContent = `${state.image ? styleText : "纯底色实体盘，可直接手工上色"} · ${patternOffsetText()}。`;
+    }
+
+    function renderPalette() {
+      if (currentMode() !== "color") return;
+      const outline = currentColorStyle() === "outline";
+      state.activeColorIndex = Math.max(0, Math.min(state.colorPalette.length - 1, state.activeColorIndex));
+      controls.paletteGrid.innerHTML = state.colorPalette.map((color, index) => {
+        const name = index === 0 ? "背景底色" : outline ? "黑色描线" : `图案颜色 ${index}`;
+        const removable = !outline && index > 0 && state.colorPalette.length > 2;
+        return `<div class="palette-item${index === state.activeColorIndex ? " active" : ""}" data-palette-index="${index}"><input type="color" value="${color}" aria-label="${name}" ${outline && index === 1 ? "disabled" : ""}><strong>${name}<br><span style="color:var(--ink-soft);font:9px var(--mono)">${color.toUpperCase()}</span></strong>${removable ? `<button type="button" data-remove-color="${index}">合并</button>` : `<button type="button" data-select-color="${index}">${index === state.activeColorIndex ? "当前" : "选择"}</button>`}</div>`;
+      }).join("");
+      controls.reextractColors.disabled = !state.image || outline;
+    }
+
+    function mergePaletteColor(index) {
+      if (index <= 0 || state.colorPalette.length <= 2) return;
+      const removedLab = rgbToLab(hexToRgb(state.colorPalette[index]));
+      let target = 0, distance = Infinity;
+      state.colorPalette.forEach((color, candidate) => {
+        if (candidate === index) return;
+        const nextDistance = labDistance(removedLab, rgbToLab(hexToRgb(color)));
+        if (nextDistance < distance) { target = candidate; distance = nextDistance; }
+      });
+      const remap = (value) => value === index ? target : value > index ? value - 1 : value;
+      [state.colorBaseMask, state.colorMask].forEach((mask) => {
+        if (!mask) return;
+        for (let cursor = 0; cursor < mask.length; cursor += 1) mask[cursor] = remap(mask[cursor]);
+      });
+      state.patternEdits.forEach((edit) => { if (Number.isInteger(edit.colorIndex)) edit.colorIndex = remap(edit.colorIndex); });
+      state.colorPalette.splice(index, 1);
+      state.activeColorIndex = remap(state.activeColorIndex);
+      controls.colorCount.value = String(state.colorPalette.length);
+      $('[data-pair="colorCount"]').value = controls.colorCount.value;
+      state.paletteUserEdited = true;
+      rebuildEditedMask(true);
+      renderPalette();
+      showToast("该颜色已合并到最接近的剩余颜色");
+    }
+
+    function syncModeUi() {
+      const colorMode = currentMode() === "color";
+      const outline = colorMode && currentColorStyle() === "outline";
+      controls.patternLegend.classList.toggle("hollow", currentMode() === "cut");
+      controls.colorSettings.hidden = !colorMode;
+      controls.paletteSettings.hidden = !colorMode || outline;
+      controls.outlineSettings.hidden = !outline;
+      controls.binaryAdjustments.hidden = colorMode;
+      controls.reliefControl.hidden = currentMode() !== "relief";
+      controls.uploadTitle.textContent = colorMode ? "上传彩色图片或线稿" : "上传黑白图案";
+      controls.patternScaleNote.textContent = colorMode ? "相对于整个圆形顶面的图片比例；可配合拖动和旋转调整构图。" : "相对于外圈以内可用图案区域的占比；围绕当前图案中心缩放，不影响外圈和卡爪根部保护区。";
+      controls.patternCanvas.setAttribute("aria-label", colorMode ? "可编辑的轮毂盖顶面颜色" : "可编辑的镂空图案");
+      controls.patternTools.setAttribute("aria-label", colorMode ? "顶面上色编辑工具" : "镂空编辑工具");
+      controls.patternEditTabLabel.textContent = colorMode ? (outline ? "描线编辑" : "颜色编辑") : currentMode() === "cut" ? "镂空编辑" : "浮雕预览";
+      controls.canvasHint.textContent = colorMode ? "彩色：齐平嵌色顶层 / 青色：参考轮辐边缘（不导出）" : "橙色：轮毂盖与向外双爪 / 青色：参考开口左右边缘（不导出）";
+      controls.smoothCutBrush.hidden = colorMode;
+      controls.bridgeBrush.hidden = colorMode;
+      controls.cutBrush.textContent = colorMode ? (outline ? "增加黑线" : "涂当前颜色") : "增加镂空";
+      controls.solidBrush.textContent = colorMode ? "恢复底色" : "补回实体";
+      if (colorMode) {
+        state.patternTool = state.patternTool === "move" ? "move" : "cut";
+        state.colorPalette[0] = controls.baseColor.value;
+        if (outline) state.colorPalette = [controls.baseColor.value, "#181817"];
+        controls.patternLegend.innerHTML = outline
+          ? `<span class="solid">背景底色</span><span class="cut">黑色描线</span>`
+          : state.colorPalette.map((color, index) => `<span style="--legend-color:${color}"><i style="display:inline-block;width:8px;height:8px;margin-right:4px;background:${color};border:1px solid var(--line)"></i>${index === 0 ? "底色" : `颜色 ${index}`}</span>`).join("");
+        controls.downloadStl.textContent = "下载单色备用 STL";
+        renderPalette();
+      } else {
+        controls.patternLegend.innerHTML = `<span class="cut">${currentMode() === "cut" ? "镂空" : "浮雕"}</span><span class="solid">保留实体</span>${currentMode() === "cut" ? `<span class="island">未连接孤岛</span>` : ""}`;
+        controls.downloadStl.textContent = "下载 STL";
+      }
+      updatePatternEditorControls();
+    }
+
     function setPatternOffset(x, y, rebuildModel = true) {
       const limit = patternAvailableSize() / 2;
       const distance = Math.hypot(x, y);
       const ratio = distance > limit ? limit / distance : 1;
       state.patternOffsetX = x * ratio;
       state.patternOffsetY = y * ratio;
-      drawPatternPreview(state.mask?.data || null);
+      if (currentMode() === "color") processImage();
+      else drawPatternPreview(state.mask?.data || null);
       updatePatternEditorControls();
-      if (rebuildModel) scheduleRebuild();
+      if (rebuildModel && currentMode() !== "color") scheduleRebuild();
     }
 
     function setPatternRotation(value, rebuildModel = true) {
@@ -1076,9 +1505,10 @@
       state.patternRotation = Math.max(-180, Math.min(180, Number.isFinite(numericValue) ? numericValue : 0));
       controls.patternRotation.value = String(state.patternRotation);
       $('[data-pair="patternRotation"]').value = String(state.patternRotation);
-      drawPatternPreview(state.mask?.data || null);
+      if (currentMode() === "color") processImage();
+      else drawPatternPreview(state.mask?.data || null);
       updatePatternEditorControls();
-      if (rebuildModel) scheduleRebuild();
+      if (rebuildModel && currentMode() !== "color") scheduleRebuild();
     }
 
     function drawPatternPreview(mask) {
@@ -1107,8 +1537,15 @@
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = "high";
         drawTransformed(state.sourcePreview);
+      } else if (currentMode() === "color" && mask) {
+        const preview = ctx.createImageData(size, size);
+        for (let index = 0; index < mask.length; index += 1) {
+          const rgb = hexToRgb(state.colorPalette[mask[index]] || state.colorPalette[0]);
+          preview.data[index * 4] = rgb[0]; preview.data[index * 4 + 1] = rgb[1]; preview.data[index * 4 + 2] = rgb[2]; preview.data[index * 4 + 3] = 255;
+        }
+        ctx.putImageData(preview, 0, 0);
       } else if (!mask) {
-        ctx.strokeStyle = "#ec6a3a";
+        ctx.strokeStyle = currentMode() === "cut" ? "#181817" : "#ec6a3a";
         ctx.lineWidth = size * .115 * scale;
         ctx.lineCap = "round";
         for (let index = 0; index < 10; index += 1) {
@@ -1125,9 +1562,11 @@
         const sourceCtx = source.getContext("2d");
         const preview = sourceCtx.createImageData(size, size);
         const islandMap = new Uint8Array(mask.length);
+        const patternColor = currentMode() === "cut" ? [24,24,23] : [236,106,58];
+        const solidColor = currentMode() === "cut" ? [255,255,255] : [247,243,234];
         state.solidIslands.forEach((island, islandIndex) => island.forEach((pixel) => { islandMap[pixel] = islandIndex === state.selectedIsland ? 2 : 1; }));
         for (let index = 0; index < mask.length; index += 1) {
-          const color = islandMap[index] === 2 ? [242,148,24] : islandMap[index] === 1 ? [206,83,74] : mask[index] ? [236,106,58] : [247,243,234];
+          const color = islandMap[index] === 2 ? [242,148,24] : islandMap[index] === 1 ? [206,83,74] : mask[index] ? patternColor : solidColor;
           preview.data[index * 4] = color[0];
           preview.data[index * 4 + 1] = color[1];
           preview.data[index * 4 + 2] = color[2];
@@ -1140,7 +1579,7 @@
       }
       ctx.strokeStyle = "#d5cec1";
       ctx.lineWidth = Math.max(1, size / 256);
-      ctx.beginPath(); ctx.arc(size / 2, size / 2, size * .438, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(size / 2, size / 2, size * (currentMode() === "color" ? .495 : .438), 0, Math.PI * 2); ctx.stroke();
     }
 
     function processImage() {
@@ -1151,6 +1590,10 @@
       controls.samplingResolution.value = requestedSize;
       const canvas = controls.patternCanvas;
       if (canvas.width !== requestedSize) canvas.width = canvas.height = requestedSize;
+      if (currentMode() === "color") {
+        processColorImage();
+        return;
+      }
       const size = canvas.width;
       if (!state.image) {
         state.sourcePreview = null;
@@ -1396,7 +1839,37 @@
       }
     }
 
+    function applyColorEdit(mask, size, edit) {
+      if (!edit.points?.length || !["paintColor", "eraseColor"].includes(edit.kind)) return;
+      const value = edit.kind === "eraseColor" ? 0 : Math.max(0, Math.min(state.colorPalette.length - 1, edit.colorIndex ?? state.activeColorIndex));
+      const radius = Math.max(.75, edit.sizeMm / Math.max(.001, numberValue(controls.coverDiameter) / size) / 2);
+      const points = edit.points.map((point) => ({ x:point.x * (size - 1), y:point.y * (size - 1) }));
+      drawMaskDisk(mask, size, points[0].x, points[0].y, radius, value);
+      for (let index = 1; index < points.length; index += 1) {
+        const from = points[index - 1], to = points[index];
+        const steps = Math.max(1, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / Math.max(1, radius * .5)));
+        for (let step = 1; step <= steps; step += 1) {
+          const ratio = step / steps;
+          drawMaskDisk(mask, size, from.x + (to.x - from.x) * ratio, from.y + (to.y - from.y) * ratio, radius, value);
+        }
+      }
+    }
+
     function rebuildEditedMask(rebuildModel = false) {
+      if (currentMode() === "color") {
+        const size = controls.patternCanvas.width;
+        const data = state.colorBaseMask?.slice() || new Uint8Array(size * size);
+        state.patternEdits.forEach((edit) => applyColorEdit(data, size, edit));
+        if (state.patternDraft) applyColorEdit(data, size, state.patternDraft);
+        state.colorMask = data;
+        state.mask = { data, size };
+        state.solidIslands = [];
+        state.exteriorSolid = null;
+        drawPatternPreview(data);
+        updatePatternEditorControls();
+        if (rebuildModel) scheduleRebuild();
+        return;
+      }
       if (!state.baseMask) return;
       const size = controls.patternCanvas.width;
       const data = state.baseMask.slice();
@@ -1411,12 +1884,13 @@
       updatePatternEditorControls();
       const adjustment = `比例 ${(currentPatternScale() * 100).toFixed(0)}% · ${patternOffsetText()} · ${size}px · 平滑 ${currentPatternSmoothing()}`;
       const islandText = state.solidIslands.length ? ` · ${state.solidIslands.length} 个孤岛待处理` : "";
-      controls.patternStatus.textContent = `${currentMode() === "cut" ? "橙色区域将被切穿" : "橙色区域将生成浮雕"}${islandText} · ${adjustment}。`;
+      controls.patternStatus.textContent = `${currentMode() === "cut" ? "黑色区域将被切穿，白色区域保留实体" : "橙色区域将生成浮雕"}${islandText} · ${adjustment}。`;
       if (rebuildModel) scheduleRebuild();
     }
 
     function updatePatternEditorControls() {
-      const editable = Boolean(state.image) && currentMode() === "cut" && state.patternView === "mask";
+      const colorMode = currentMode() === "color";
+      const editable = state.patternView === "mask" && (colorMode || Boolean(state.image) && currentMode() === "cut");
       const movable = state.patternView === "mask" || Boolean(state.sourcePreview);
       controls.movePattern.disabled = !movable;
       [controls.cutBrush, controls.smoothCutBrush, controls.solidBrush, controls.bridgeBrush].forEach((button) => { button.disabled = !editable; });
@@ -1431,7 +1905,7 @@
       controls.islandCounter.textContent = state.solidIslands.length ? `${state.selectedIsland + 1} / ${state.solidIslands.length}` : "0 / 0";
       controls.patternCanvasWrap.dataset.view = state.patternView;
       controls.patternCanvasWrap.dataset.tool = state.patternTool;
-      controls.brushSizeLabel.textContent = ["cut", "smoothCut"].includes(state.patternTool) ? "镂空宽度" : state.patternTool === "bridge" ? "桥宽" : "补实体宽度";
+      controls.brushSizeLabel.textContent = colorMode ? "上色笔触宽度" : ["cut", "smoothCut"].includes(state.patternTool) ? "镂空宽度" : state.patternTool === "bridge" ? "桥宽" : "补实体宽度";
       $$('[data-pattern-view]').forEach((button) => button.classList.toggle("active", button.dataset.patternView === state.patternView));
       $$('[data-pattern-tool]').forEach((button) => {
         const active = button.dataset.patternTool === state.patternTool;
@@ -1441,8 +1915,14 @@
     }
 
     function patternPointFromEvent(event) {
-      if (!state.image || state.patternView !== "mask" || currentMode() !== "cut") return null;
+      if (state.patternView !== "mask") return null;
       const rect = controls.patternCanvas.getBoundingClientRect();
+      if (currentMode() === "color") {
+        const x = (event.clientX - rect.left) / rect.width, y = (event.clientY - rect.top) / rect.height;
+        if ((x - .5) ** 2 + (y - .5) ** 2 > .25) return null;
+        return { x, y };
+      }
+      if (!state.image || currentMode() !== "cut") return null;
       const scale = currentPatternScale();
       const availableSize = patternAvailableSize();
       const screenX = (event.clientX - rect.left) / rect.width - .5 - state.patternOffsetX / availableSize;
@@ -1634,7 +2114,7 @@
       gl.enableVertexAttribArray(position); gl.vertexAttribPointer(position, 3, gl.FLOAT, false, stride, 0);
       gl.enableVertexAttribArray(normal); gl.vertexAttribPointer(normal, 3, gl.FLOAT, false, stride, 3 * 4);
       gl.enableVertexAttribArray(color); gl.vertexAttribPointer(color, 4, gl.FLOAT, false, stride, 6 * 4);
-      const radius = params().coverDiameter / 2;
+      const radius = state.previewRadius;
       const distance = radius * 2.65 / state.zoom;
       const eye = [distance * Math.cos(state.pitch) * Math.sin(state.yaw), distance * Math.sin(state.pitch), distance * Math.cos(state.pitch) * Math.cos(state.yaw)];
       const projection = perspective(Math.PI / 4, width / height, Math.max(.1, radius * .01), radius * 12);
@@ -1689,21 +2169,60 @@
     }
 
     function escapeXml(value) { return String(value).replace(/[&<>"']/g, (character) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&apos;" }[character])); }
+    function meshXml(mesh, precise = false) {
+      // 分体零件保留内核坐标，避免六位小数舍入把相邻边界顶点压成同一点。
+      const coordinate = (value) => precise ? String(value) : value.toFixed(6);
+      const vertices = mesh.vertices.map((vertex) => `<vertex x="${coordinate(vertex[0])}" y="${coordinate(vertex[1])}" z="${coordinate(vertex[2])}"/>`).join("");
+      const triangles = mesh.triangles.map((face) => `<triangle v1="${face[0]}" v2="${face[1]}" v3="${face[2]}"/>`).join("");
+      return `<mesh><vertices>${vertices}</vertices><triangles>${triangles}</triangles></mesh>`;
+    }
+    function translationTransform(x, y, z) { return `1 0 0 0 1 0 0 0 1 ${x.toFixed(6)} ${y.toFixed(6)} ${z.toFixed(6)}`; }
     function buildThreeMf() {
       if (!state.exportMesh) throw new Error("封闭索引网格尚未生成");
-      const vertices = state.exportMesh.vertices;
-      const faces = state.exportMesh.triangles;
-      const vertexXml = vertices.map((v) => `<vertex x="${v[0].toFixed(6)}" y="${v[1].toFixed(6)}" z="${v[2].toFixed(6)}"/>`).join("");
-      const faceXml = faces.map((face) => `<triangle v1="${face[0]}" v2="${face[1]}" v3="${face[2]}"/>`).join("");
       const p = params();
+      if (p.mount && p.mode === "color" && state.multicolorCoordinateWarnings) throw new Error(`多色色块存在 ${state.multicolorCoordinateWarnings} 处坐标闭边歧义，请先提高最小色块宽度`);
       const enabled = activeClipIndices(p).length;
       const strengthName = { easy:"容易拆装", balanced:"均衡", reinforced:"加强且可拆" }[p.strengthPreset];
       const fitName = { tight:"偏紧", standard:"标准", loose:"偏松" }[p.fitPreset];
       const coverDimensions = `盖板厚度 ${p.coverThickness.toFixed(1)} mm；外圈裙边 ${p.skirtHeight > 0 ? `${p.skirtHeight.toFixed(1)} mm 高 × ${p.skirtThickness.toFixed(1)} mm 厚` : "未生成"}`;
       const clipDimensions = `开口宽度 ${p.openingWidth} mm；径向宽度 ${p.contactLength} mm；根/末爪厚 ${p.legThickness}/${p.tipThickness} mm；边缘间隙 ${p.sideClearance} mm；单侧外勾 ${p.hookReach} mm；自动倒钩轴向高度 ${p.hookHeight} mm；导入坡度 ${p.insertionAngle.toFixed(1)}°`;
-      const patternSettings = `比例 ${(p.patternScale * 100).toFixed(0)}%；位置 X ${p.patternOffsetX.toFixed(1)} / Y ${p.patternOffsetY.toFixed(1)} mm；旋转 ${p.patternRotation.toFixed(0)}°；采样 ${p.samplingResolution}px；轮廓平滑 ${p.patternSmoothing}；杂点清理 ${p.cleanup}；镂空闭合 ${p.closeStrength}；最小镂空 ${p.minHoleArea} mm²；镂空扩张 ${p.hollowExpansion} mm；手工编辑 ${state.patternEdits.length} 项；阈值 ${numberValue(controls.threshold)}；反色 ${controls.invertPattern.checked ? "开启" : "关闭"}`;
+      const patternSettings = p.mode === "color"
+        ? `${p.colorStyle === "outline" ? `双色描线；来源 ${selectedPreset("outlineSource")}；线宽 ${numberValue(controls.outlineWidth).toFixed(1)} mm；灵敏度 ${numberValue(controls.edgeSensitivity)}；断线连接 ${numberValue(controls.outlineClose)}；杂线清理 ${numberValue(controls.outlineCleanup)}；平滑 ${numberValue(controls.outlineSmoothing)}` : `图片自动分色；目标 ${numberValue(controls.colorCount)} 色；最小色块 ${numberValue(controls.minColorFeature).toFixed(1)} mm`}；色板 ${p.colorPalette.join(" / ")}；背景底色 ${p.colorPalette[0]}；嵌色层 ${p.colorLayerHeight.toFixed(1)} mm；比例 ${(p.patternScale * 100).toFixed(0)}%；位置 X ${p.patternOffsetX.toFixed(1)} / Y ${p.patternOffsetY.toFixed(1)} mm；旋转 ${p.patternRotation.toFixed(0)}°；手工上色 ${state.patternEdits.length} 项`
+        : `比例 ${(p.patternScale * 100).toFixed(0)}%；位置 X ${p.patternOffsetX.toFixed(1)} / Y ${p.patternOffsetY.toFixed(1)} mm；旋转 ${p.patternRotation.toFixed(0)}°；采样 ${p.samplingResolution}px；轮廓平滑 ${p.patternSmoothing}；杂点清理 ${p.cleanup}；镂空闭合 ${p.closeStrength}；最小镂空 ${p.minHoleArea} mm²；镂空扩张 ${p.hollowExpansion} mm；手工编辑 ${state.patternEdits.length} 项；阈值 ${numberValue(controls.threshold)}；反色 ${controls.invertPattern.checked ? "开启" : "关闭"}`;
       const geometryCheck = state.geometryVerification ? `${state.geometryVerification.status}; components=${state.geometryVerification.componentCount}; invalidEdges=${state.geometryVerification.invalidEdges}` : "Unavailable";
-      const model = `<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="zh-CN" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Title">婴儿车装饰轮毂盖 ${p.coverDiameter}mm</metadata><metadata name="Application">婴儿车轮毂盖生成器</metadata><metadata name="Description">非承力装饰件；${enabled} 组同开口向外双爪；${p.mode === "cut" ? "贯穿镂空" : "浅浮雕"}</metadata><metadata name="CoverDimensions">${coverDimensions}</metadata><metadata name="StrengthPreset">${strengthName}</metadata><metadata name="FitPreset">${fitName}</metadata><metadata name="ClipSettings">${state.customClipSettings ? "自定义" : "跟随预设"}</metadata><metadata name="ClipDimensions">${clipDimensions}</metadata><metadata name="PatternSettings">${patternSettings}</metadata><metadata name="EstimatedStrain">${p.estimatedStrain.toFixed(2)}%</metadata><metadata name="GeometryKernel">Manifold 3.5.1</metadata><metadata name="GeometryCheck">${geometryCheck}</metadata><resources><object id="1" type="model" name="${escapeXml(`轮毂盖-${enabled}组向外双爪`)}"><mesh><vertices>${vertexXml}</vertices><triangles>${faceXml}</triangles></mesh></object></resources><build><item objectid="1"/></build></model>`;
+      const materialPartChecks = state.materialParts.map((part, index) => `${index + 1}:${part.verification.status},components=${part.verification.componentCount},invalidEdges=${part.verification.invalidEdges}`).join("; ");
+      const modeName = p.mode === "cut" ? "贯穿镂空" : p.mode === "relief" ? "浅浮雕" : p.colorStyle === "outline" ? "实体盘双色描线" : "实体盘多色";
+      let resources, build;
+      if (p.mode === "color") {
+        if (!state.materialParts.length) throw new Error("分色封闭网格尚未生成");
+        const materials = p.colorPalette.map((color, index) => `<base name="${escapeXml(index === 0 ? "背景底色" : p.colorStyle === "outline" ? "黑色描线" : `图案颜色 ${index}`)}" displaycolor="${color.toUpperCase()}"/>`).join("");
+        const objects = state.materialParts.map((part, index) => `<object id="${index + 2}" type="model" pid="1" pindex="${part.materialIndex}" name="${escapeXml(part.name)}">${meshXml(part.exportMesh, Boolean(p.mount))}</object>`).join("");
+        const assemblyId = state.materialParts.length + 2;
+        const components = state.materialParts.map((_, index) => `<component objectid="${index + 2}"/>`).join("");
+        resources = `<basematerials id="1">${materials}</basematerials>${objects}<object id="${assemblyId}" type="model" name="${escapeXml(`轮毂盖-${modeName}`)}"><components>${components}</components></object>`;
+        build = `<item objectid="${assemblyId}"/>`;
+      } else {
+        resources = `<object id="1" type="model" name="${escapeXml(p.mount ? `轮毂盖与${enabled}组刚性固定座` : `轮毂盖-${enabled}组向外双爪`)}">${meshXml(state.exportMesh, Boolean(p.mount))}</object>`;
+        build = `<item objectid="1"/>`;
+      }
+      let mountingMetadata = "";
+      if (p.mount) {
+        if (!state.clipSample || state.clipParts.length !== enabled) throw new Error("可拆卡扣网格尚未生成");
+        const sample = state.clipSample;
+        const bounds = sample.verification.bounds;
+        const pitch = bounds.max[1] - bounds.min[1] + 8;
+        const x = p.coverDiameter/2 - bounds.min[0] + 10;
+        build = build.replace("/>", ` transform="${translationTransform(0,0,-state.geometryVerification.bounds.min[2])}"/>`);
+        // 独立 build 项平铺打印；不能作为一个相交的装配网格交给切片器自动合并。
+        const firstId = p.mode === "color" ? state.materialParts.length + 3 : 2;
+        state.clipParts.forEach((part, index) => {
+          const id = firstId + index;
+          resources += `<object id="${id}" type="model"${p.mode === "color" ? ' pid="1" pindex="0"' : ""} name="${escapeXml(part.name)}">${meshXml(sample.exportMesh, true)}</object>`;
+          build += `<item objectid="${id}" transform="${translationTransform(x,(index-(enabled-1)/2)*pitch,0)}"/>`;
+        });
+        mountingMetadata = `<metadata name="DetachableMount">${escapeXml(JSON.stringify(p.mount))}</metadata><metadata name="MechanicalPartChecks">${escapeXml(JSON.stringify(state.clipParts.map((part) => ({ name:part.name, ...part.verification }))))}</metadata><metadata name="PrintingLayout">盖板与卡扣为独立打印对象；卡扣已侧放。按打印平台大小重新排版并检查支撑；不要合并。侧窗按压解锁，先拆下整盖再更换卡扣。</metadata>`;
+      }
+      const model = `<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="zh-CN" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Title">婴儿车装饰轮毂盖 ${p.coverDiameter}mm</metadata><metadata name="Application">婴儿车轮毂盖生成器</metadata><metadata name="Description">非承力装饰件；${enabled} 组同开口向外双爪；${modeName}</metadata><metadata name="AttachmentMode">${p.attachmentMode}</metadata>${mountingMetadata}<metadata name="CoverDimensions">${escapeXml(coverDimensions)}</metadata><metadata name="StrengthPreset">${strengthName}</metadata><metadata name="FitPreset">${fitName}</metadata><metadata name="ClipSettings">${state.customClipSettings ? "自定义" : "跟随预设"}</metadata><metadata name="ClipDimensions">${escapeXml(clipDimensions)}</metadata><metadata name="PatternSettings">${escapeXml(patternSettings)}</metadata><metadata name="EstimatedStrain">${p.estimatedStrain.toFixed(2)}%</metadata><metadata name="GeometryKernel">Manifold 3.5.1</metadata><metadata name="GeometryCheck">${geometryCheck}</metadata>${p.mode === "color" ? `<metadata name="MaterialPartChecks">${escapeXml(materialPartChecks)}</metadata>` : ""}<resources>${resources}</resources><build>${build}</build></model>`;
       const types = `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>`;
       const rels = `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>`;
       return createStoredZip([{ name:"[Content_Types].xml", content:types }, { name:"_rels/.rels", content:rels }, { name:"3D/3dmodel.model", content:model }]);
@@ -1714,11 +2233,17 @@
       const url = URL.createObjectURL(blob), anchor = document.createElement("a");
       anchor.href = url; anchor.download = filename; document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
-    function filename(extension) { const p = params(); return `婴儿车轮毂盖-${p.coverDiameter}mm-${activeClipIndices(p).length}组双爪-${p.mode === "cut" ? "镂空" : "浮雕"}.${extension}`; }
-    function trialFilename() { const p = params(); return `单组试装向外双爪-开口${p.openingWidth}mm-深度${p.spokeBackDepth}mm-外勾${p.hookReach}mm.stl`; }
+    function filename(extension) {
+      const p = params();
+      const mode = p.mode === "cut" ? "镂空" : p.mode === "relief" ? "浮雕" : p.colorStyle === "outline" ? "双色描线" : `${new Set(state.materialParts.map((part) => part.materialIndex)).size || p.colorPalette.length}色实体盘`;
+      const suffix = p.mode === "color" && extension === "stl" ? `${mode}-单色备用` : mode;
+      return `婴儿车轮毂盖-${p.coverDiameter}mm-${activeClipIndices(p).length}组双爪-${p.mount ? extension === "stl" ? "可拆盖板-" : "可拆分件-" : ""}${suffix}.${extension}`;
+    }
+    function trialFilename() { const p = params(); return `${p.mount ? `可更换卡扣-滑槽间隙${p.mount.clearance}mm` : "单组试装向外双爪"}-开口${p.openingWidth}mm-深度${p.spokeBackDepth}mm-外勾${p.hookReach}mm.stl`; }
     function showToast(message) { controls.toast.textContent = message; controls.toast.classList.add("show"); clearTimeout(showToast.timer); showToast.timer = setTimeout(() => controls.toast.classList.remove("show"), 2400); }
 
     const imageProcessingPairs = ["coverDiameter", "patternScale", "threshold", "samplingResolution", "cleanup", "closeStrength", "minHoleArea", "hollowExpansion", "smoothing"];
+    const colorProcessingPairs = ["colorCount", "minColorFeature", "outlineWidth", "edgeSensitivity", "outlineClose", "outlineCleanup", "outlineSmoothing"];
     $$('input[type="range"][data-pair]').forEach((range) => {
       const number = $(`#${range.dataset.pair}`);
       range.addEventListener("input", () => {
@@ -1726,7 +2251,10 @@
         if (range.dataset.pair === "clipCount") resetClipGroups(range.value);
         if (range.dataset.pair === "brushSize") updatePatternEditorControls();
         else if (range.dataset.pair === "patternRotation") setPatternRotation(range.value);
-        else if (imageProcessingPairs.includes(range.dataset.pair)) processImage();
+        else if (imageProcessingPairs.includes(range.dataset.pair) || colorProcessingPairs.includes(range.dataset.pair)) {
+          if (range.dataset.pair === "colorCount") state.paletteUserEdited = false;
+          processImage();
+        }
         else scheduleRebuild();
       });
       number.addEventListener("input", () => {
@@ -1734,7 +2262,10 @@
         if (range.dataset.pair === "clipCount") resetClipGroups(number.value);
         if (range.dataset.pair === "brushSize") updatePatternEditorControls();
         else if (range.dataset.pair === "patternRotation") setPatternRotation(number.value);
-        else if (imageProcessingPairs.includes(range.dataset.pair)) processImage();
+        else if (imageProcessingPairs.includes(range.dataset.pair) || colorProcessingPairs.includes(range.dataset.pair)) {
+          if (range.dataset.pair === "colorCount") state.paletteUserEdited = false;
+          processImage();
+        }
         else scheduleRebuild();
       });
     });
@@ -1743,6 +2274,15 @@
     controls.configList.addEventListener("change", () => {
       const config = selectedSavedConfig();
       if (config) controls.configName.value = config.name;
+    });
+    $$('input[name="attachmentMode"]').forEach((input) => input.addEventListener("change", () => {
+      controls.attachmentPreview.value = "assembled";
+      scheduleRebuild();
+    }));
+    controls.attachmentPreview.addEventListener("change", () => {
+      updatePreviewMesh();
+      uploadMesh();
+      setView(controls.attachmentPreview.value === "cover" ? "back" : "perspective");
     });
     controls.clipGroupPicker.addEventListener("click", (event) => {
       const button = event.target.closest("[data-clip-index]");
@@ -1753,7 +2293,19 @@
       state.activeClipGroups[index] = !state.activeClipGroups[index];
       void rebuildMesh();
     });
-    $$('input[name="patternMode"]').forEach((input) => input.addEventListener("change", () => { controls.reliefControl.hidden = currentMode() !== "relief"; processImage(); updatePatternEditorControls(); }));
+    $$('input[name="patternMode"]').forEach((input) => input.addEventListener("change", () => {
+      state.patternEdits = []; state.patternUndo = []; state.patternRedo = []; state.patternDraft = null;
+      syncModeUi();
+      processImage();
+    }));
+    $$('input[name="colorStyle"]').forEach((input) => input.addEventListener("change", () => {
+      state.patternEdits = []; state.patternUndo = []; state.patternRedo = []; state.patternDraft = null;
+      state.paletteUserEdited = false;
+      state.activeColorIndex = 1;
+      syncModeUi();
+      processImage();
+    }));
+    $$('input[name="outlineSource"]').forEach((input) => input.addEventListener("change", processImage));
     $$('input[name="strengthPreset"], input[name="fitPreset"]').forEach((input) => input.addEventListener("change", () => {
       state.customClipSettings = false;
       controls.clipDetailStatus.textContent = "跟随预设";
@@ -1765,6 +2317,40 @@
       scheduleRebuild();
     }));
     controls.invertPattern.addEventListener("change", processImage);
+    controls.baseColor.addEventListener("input", () => {
+      state.colorPalette[0] = controls.baseColor.value;
+      state.paletteUserEdited = true;
+      if (state.colorMask) drawPatternPreview(state.colorMask);
+      renderPalette();
+      scheduleRebuild();
+    });
+    controls.reextractColors.addEventListener("click", () => {
+      state.paletteUserEdited = false;
+      processImage();
+      showToast("已重新从图片提取打印色板");
+    });
+    controls.paletteGrid.addEventListener("click", (event) => {
+      const remove = event.target.closest("[data-remove-color]");
+      if (remove) return mergePaletteColor(Number(remove.dataset.removeColor));
+      const item = event.target.closest("[data-palette-index]");
+      if (!item) return;
+      state.activeColorIndex = Number(item.dataset.paletteIndex);
+      state.patternTool = state.activeColorIndex === 0 ? "solid" : "cut";
+      renderPalette();
+      updatePatternEditorControls();
+    });
+    controls.paletteGrid.addEventListener("input", (event) => {
+      const input = event.target.closest('input[type="color"]');
+      const item = event.target.closest("[data-palette-index]");
+      if (!input || !item) return;
+      const index = Number(item.dataset.paletteIndex);
+      state.colorPalette[index] = input.value;
+      if (index === 0) controls.baseColor.value = input.value;
+      state.paletteUserEdited = true;
+      drawPatternPreview(state.colorMask);
+      renderPalette();
+      scheduleRebuild();
+    });
     controls.imageInput.addEventListener("change", () => {
       const file = controls.imageInput.files?.[0]; if (!file) return;
       const image = new Image(); image.onload = () => {
@@ -1777,6 +2363,7 @@
         state.patternEdits = [];
         state.patternUndo = [];
         state.patternRedo = [];
+        state.paletteUserEdited = false;
         state.selectedIsland = 0;
         controls.uploadName.textContent = file.name;
         processImage();
@@ -1842,7 +2429,8 @@
       if (!point) return;
       event.preventDefault();
       const sizeMm = state.patternTool === "bridge" ? Math.max(1.2, numberValue(controls.brushSize)) : numberValue(controls.brushSize);
-      state.patternDraft = { kind:state.patternTool, sizeMm, points:[point] };
+      const draftKind = currentMode() === "color" ? (state.patternTool === "solid" ? "eraseColor" : "paintColor") : state.patternTool;
+      state.patternDraft = { kind:draftKind, colorIndex:state.activeColorIndex, sizeMm, points:[point] };
       controls.patternCanvas.setPointerCapture?.(event.pointerId);
       rebuildEditedMask(false);
     });
@@ -1872,7 +2460,7 @@
       if (!state.patternDraft) return;
       const point = patternPointFromEvent(event);
       if (point) appendPatternPoint(state.patternDraft, point);
-      if (state.patternDraft.kind === "smoothCut") state.patternDraft.points = smoothPatternPoints(state.patternDraft.points);
+      if (["smoothCut", "paintColor", "eraseColor"].includes(state.patternDraft.kind)) state.patternDraft.points = smoothPatternPoints(state.patternDraft.points);
       recordPatternHistory();
       state.patternEdits.push(state.patternDraft);
       state.patternDraft = null;
@@ -1892,8 +2480,14 @@
     controls.previewCanvas.addEventListener("pointermove", (event) => { if (!state.dragging) return; const dx = event.clientX - state.pointer.x, dy = event.clientY - state.pointer.y; state.pointer = { x:event.clientX, y:event.clientY }; state.yaw -= dx * .009; state.pitch = Math.max(-1.48, Math.min(1.48, state.pitch + dy * .009)); requestRender(); });
     controls.previewCanvas.addEventListener("pointerup", () => { state.dragging = false; });
     controls.previewCanvas.addEventListener("wheel", (event) => { event.preventDefault(); state.zoom = Math.max(.55, Math.min(2.2, state.zoom * Math.exp(-event.deltaY * .001))); requestRender(); }, { passive:false });
-    controls.downloadStl.addEventListener("click", () => { if (!state.validation.valid || !state.geometryVerification) return; download(trianglesToBinaryStl(state.exportTriangles), filename("stl"), "application/octet-stream"); showToast("STL 已导出，请先打印小样试装"); });
-    controls.download3mf.addEventListener("click", () => { if (!state.validation.valid || !state.geometryVerification) return; download(buildThreeMf(), filename("3mf"), "model/3mf"); showToast("3MF 已导出，请先打印小样试装"); });
+    controls.downloadStl.addEventListener("click", () => { if (!state.validation.valid || !state.geometryVerification || state.geometryBuilding) return; download(trianglesToBinaryStl(state.exportTriangles), filename("stl"), "application/octet-stream"); showToast(params().mount ? "盖板与固定座已导出；请另行下载卡扣 STL" : currentMode() === "color" ? "单色备用 STL 已导出；STL 不保存颜色" : "STL 已导出，请先打印小样试装"); });
+    controls.download3mf.addEventListener("click", () => {
+      if (!state.validation.valid || !state.geometryVerification || state.geometryBuilding) return;
+      try {
+        download(buildThreeMf(), filename("3mf"), "model/3mf");
+        showToast(params().mount ? "分件 3MF 已导出，请检查平台排版、支撑和耗材映射" : currentMode() === "color" ? "多材料 3MF 已导出，请在切片软件确认耗材映射" : "3MF 已导出，请先打印小样试装");
+      } catch (error) { showToast(`3MF 导出失败：${error instanceof Error ? error.message : String(error)}`); }
+    });
     controls.downloadTrialStl.addEventListener("click", async () => {
       const p = params();
       if (!validateTrialClip(p).valid) return;
@@ -1901,12 +2495,23 @@
       try {
         const trial = await buildTrialClipGeometry(p);
         download(trianglesToBinaryStl(trial.triangles), trialFilename(), "application/octet-stream");
-        showToast(`单组向外双爪已导出：${trial.verification.componentCount} 个封闭实体，圆底座已朝向打印平台`);
+        showToast(p.mount ? "可更换卡扣已导出：含一体止退舌，已侧放；请检查支撑和层纹" : `单组向外双爪已导出：${trial.verification.componentCount} 个封闭实体，圆底座已朝向打印平台`);
       } catch (error) {
         showToast(`试装件生成失败：${error instanceof Error ? error.message : String(error)}`);
       } finally {
         controls.downloadTrialStl.disabled = !validateTrialClip(params()).valid;
       }
+    });
+    controls.downloadSocketStl.addEventListener("click", async () => {
+      const p = params();
+      if (!p.mount || !validateTrialClip(p).valid) return;
+      controls.downloadSocketStl.disabled = true;
+      try {
+        const sample = await buildSocketTrialGeometry(p);
+        download(trianglesToBinaryStl(sample.triangles), `可拆卡扣试装座-开口${p.openingWidth}mm-滑槽间隙${p.mount.clearance}mm.stl`, "application/octet-stream");
+        showToast("试装座已导出；与单只卡扣配对检查滑入、止退和按压拆卸");
+      } catch (error) { showToast(`试装座生成失败：${error instanceof Error ? error.message : String(error)}`); }
+      finally { controls.downloadSocketStl.disabled = !validateTrialClip(params()).valid; }
     });
     window.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && controls.patternEditor.classList.contains("expanded")) {
@@ -1923,6 +2528,7 @@
 
     async function initializeApp() {
       updateConfigStore();
+      syncModeUi();
       try {
         await initializeGeometryKernel();
         state.geometryReady = true;

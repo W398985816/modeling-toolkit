@@ -42,9 +42,12 @@ export function deriveStructure(raw, custom = null) {
     hookReach:fit.hookReach,
     minWall:1.2,
     nozzleWidth:.4,
-    layerHeight:.2
+    layerHeight:.2,
+    colorLayerHeight:clamp(raw.colorLayerHeight ?? .4, .2, .8),
+    colorPalette:Array.isArray(raw.colorPalette) && raw.colorPalette.length ? raw.colorPalette : ["#f4f0e7", "#20221f"]
   };
   const result = { ...automatic, ...(custom || {}) };
+  result.attachmentMode = raw.attachmentMode === "detachable" ? "detachable" : "integrated";
   result.rootFlare = clamp(result.legThickness * strength.flareRatio, 1, 2.6);
   result.tipThickness = Math.max(1.2, result.legThickness * .72);
   result.tipWidth = Math.max(8, result.contactLength * .82);
@@ -53,12 +56,68 @@ export function deriveStructure(raw, custom = null) {
   result.insertionRampHeight = result.hookReach + result.sideClearance;
   result.hookHeight = result.insertionRampHeight + result.hookLandHeight;
   result.flexPerJaw = Math.max(0, result.hookReach);
-  result.freeLength = Math.max(2, raw.spokeBackDepth - result.rootHeight);
+  result.mount = result.attachmentMode === "detachable" ? deriveDetachableMount(result, raw.mountClearance ?? .3) : null;
+  result.freeLength = Math.max(2, raw.spokeBackDepth - result.rootHeight - (result.mount?.rootOffset || 0));
   result.insertionAngle = Math.atan2(result.hookReach + result.sideClearance, result.insertionRampHeight) * 180 / Math.PI;
   result.retentionArea = result.hookReach * result.tipWidth;
   // 仍使用等截面悬臂公式，渐变爪的实际应变会更低，因此这是保守筛查值。
   result.estimatedStrain = 1.5 * result.legThickness * result.flexPerJaw / (result.freeLength * result.freeLength) * 100;
   return result;
+}
+
+function deriveDetachableMount(p, clearance) {
+  const wall = 1.6, footThickness = 1.6, lipThickness = 1.2, bridgeThickness = 1.6;
+  const outerWidth = p.openingWidth - p.sideClearance * 2;
+  const footWidth = outerWidth - 2 * (wall + clearance);
+  const length = Math.max(18, p.contactLength + 2 * p.rootFlare + 2);
+  // 即使安装脚向另一侧偏移整个配合间隙，仍保留 0.45 mm 的锁止覆盖量。
+  const tongueThickness = 1.2, catchReach = clearance + .45;
+  const travel = clearance + catchReach + .15;
+  const footBottom = clearance + footThickness;
+  const socketDepth = footBottom + clearance + lipThickness;
+  const bridgeTop = socketDepth + clearance;
+  const rootOffset = bridgeTop + bridgeThickness;
+  const latchStart = -length / 2 + 2.4, latchEnd = length / 2 - 2.4;
+  const freeLength = latchEnd - latchStart;
+  return {
+    clearance, wall, footThickness, lipThickness, bridgeThickness, outerWidth, footWidth, length,
+    tongueThickness, catchReach, travel, footBottom, socketDepth, bridgeTop, rootOffset,
+    latchStart, latchEnd, freeLength,
+    neckWidth:Math.min(footWidth - 3.4, footWidth - 2 * (tongueThickness + travel + .4)),
+    lipInner:footWidth / 2 - 1.4,
+    latchStrain:1.5 * tongueThickness * travel / (freeLength * freeLength) * 100,
+    radialMin:-length / 2 - .5,
+    radialMax:length / 2 + clearance + wall
+  };
+}
+
+function validateDetachableMount(p) {
+  const m = p.mount;
+  if (!m) return [];
+  const errors = [];
+  if (!Number.isFinite(m.clearance) || m.clearance < .15 || m.clearance > .6) errors.push("滑槽单侧配合间隙必须在 0.15–0.60 mm 之间");
+  if (m.neckWidth < 4 || m.footWidth < 8) errors.push("轮辐开口过窄，无法容纳可拆安装脚、止退舌和刚性滑槽");
+  if (p.spokeBackDepth <= m.rootOffset + p.rootHeight + 2) errors.push("总深度不足以容纳安装座、加强根部和弹性爪段，请增大总深度或使用一体爪钩");
+  if (m.latchStrain > 3) errors.push("止退舌预计应变超过 3%，请减小滑槽间隙或增加爪片径向宽度");
+  return errors;
+}
+
+function mountFootprintsOverlap(p, first, second) {
+  const m = p.mount;
+  const halfRadial = (m.radialMax - m.radialMin) / 2 + .5;
+  const halfTangent = Math.max(m.outerWidth / 2, p.openingWidth / 2 + p.hookReach) + .5;
+  const radius = p.clipRadius + (m.radialMax + m.radialMin) / 2;
+  const boxes = [first, second].map((index) => {
+    const angle = p.startAngle + 2 * Math.PI * index / p.clipCount;
+    const radial = [Math.cos(angle), Math.sin(angle)], tangent = [-radial[1], radial[0]];
+    return { center:radial.map((value) => value * radius), radial, tangent };
+  });
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1];
+  const delta = boxes[1].center.map((value, index) => value - boxes[0].center[index]);
+  return boxes.flatMap((box) => [box.radial, box.tangent]).every((axis) => {
+    const extent = boxes.reduce((sum, box) => sum + halfRadial * Math.abs(dot(axis, box.radial)) + halfTangent * Math.abs(dot(axis, box.tangent)), 0);
+    return Math.abs(dot(delta, axis)) < extent;
+  });
 }
 
 export function clipMetrics(p, activeIndices) {
@@ -86,6 +145,7 @@ export function validateDesign(p, activeIndices, patternReport = null) {
   if (p.skirtHeight > 0 && p.skirtThickness >= m.coverRadius - 2) errors.push("裙边厚度过大，内径不足");
   if (p.skirtHeight > 0 && p.skirtHeight / p.skirtThickness > 15) warnings.push("裙边较高且较薄，注意打印翘曲和振动摆动");
   if (p.skirtHeight > p.spokeBackDepth) warnings.push("裙边高度超过卡扣总深度，请确认不会与轮毂或车轮干涉");
+  if (p.mode === "color" && p.coverThickness - p.colorLayerHeight < .4 - 1e-6) errors.push("彩色层下方必须至少保留 0.4 mm 盖板主体");
   if (m.availableArc < 3) errors.push("相邻卡爪间距小于 3 mm");
   if (p.spokeBackDepth <= p.rootHeight + 2) errors.push("卡扣总深度过短，无法保留根部渐变区和弹性直段");
   if (p.contactLength < 8) errors.push("卡爪径向宽度不能小于 8 mm");
@@ -108,6 +168,15 @@ export function validateDesign(p, activeIndices, patternReport = null) {
   }
   if (patternReport?.wallAdjusted) warnings.push("已自动合并或移除小于最小壁厚的图案细节");
   if (patternReport?.islandsRemoved) warnings.push(`已移除 ${patternReport.islandsRemoved} 个未连接主体的实体孤岛`);
+  if (p.mount) {
+    errors.push(...validateDetachableMount(p));
+    const mountingRadius = Math.hypot(p.clipRadius + p.mount.radialMax + 2, p.mount.outerWidth / 2 + 2);
+    if (p.clipRadius + p.mount.radialMin - 2 < 3 || mountingRadius > m.coverRadius) errors.push("可拆固定座或保护区越过盖板边界，请调整安装半径或盖板外径");
+    if (p.skirtHeight > 0 && mountingRadius > m.coverRadius - p.skirtThickness - .5) errors.push("可拆固定座与裙边空间冲突，请减小安装半径或裙边厚度");
+    if (activeIndices.some((first, i) => activeIndices.slice(i + 1).some((second) => mountFootprintsOverlap(p, first, second)))) errors.push("相邻可拆固定座或卡爪空间重叠，请减少组数或增大安装半径");
+    if (p.mount.latchStrain > 2) warnings.push("止退舌预计应变超过 2%，请先验证反复拆装寿命");
+    warnings.push("可拆结构需先试打印：从圆心向外滑入；更换卡扣前先拆下整盖，再按侧窗止退舌向圆心滑出");
+  }
   return { valid:errors.length === 0, errors, warnings };
 }
 
@@ -118,6 +187,7 @@ export function validateTrialClip(p) {
   if (p.openingWidth - 2 * (p.sideClearance + p.tipThickness) < 2) errors.push("轮辐开口无法为双爪保留足够弹性间隙");
   if (p.hookReach < .3 || p.hookReach > p.legThickness * 1.25) errors.push("倒钩外伸量无效");
   if (p.estimatedStrain > 3) errors.push("预计卡爪应变超过 3%");
+  errors.push(...validateDetachableMount(p));
   return { valid:errors.length === 0, errors };
 }
 
@@ -252,12 +322,132 @@ function buildClipSolids(wasm, p, activeIndices) {
   return unionAndDispose(Manifold, groups);
 }
 
+function buildDetachableSocket(wasm, p) {
+  const { Manifold } = wasm;
+  const m = p.mount, half = m.footWidth / 2, outer = m.outerWidth / 2;
+  const box = (x0, x1, y0, y1, z0, z1) => transformedBox(Manifold, [x1-x0, y1-y0, z1-z0], [x0,y0,z0]);
+  const pieces = [box(m.length/2 + m.clearance, m.radialMax, -outer, outer, -m.socketDepth, .12)];
+  [-1, 1].forEach((side) => {
+    const inner = half + m.clearance;
+    pieces.push(box(m.radialMin, m.radialMax, side > 0 ? inner : -outer, side > 0 ? outer : -inner, -m.socketDepth, .12));
+    pieces.push(box(m.radialMin, m.radialMax, side > 0 ? m.lipInner : -outer, side > 0 ? outer : -m.lipInner, -m.socketDepth, -m.footBottom - m.clearance));
+  });
+  const socket = unionAndDispose(Manifold, pieces);
+  // 固定座只有刚性锁窗；弹性舌属于滑入件。锁窗贯通侧壁，拆下盖板后可按压解锁。
+  const windowEnd = m.latchStart + .45 + m.clearance + m.catchReach + m.clearance;
+  const window = box(m.latchStart - m.clearance, windowEnd, m.lipInner - .1, outer + .1, -m.socketDepth - .1, .13);
+  const cut = socket.subtract(window);
+  dispose(socket, window);
+  return cut;
+}
+
+function buildDetachableClip(wasm, p) {
+  const { Manifold, CrossSection } = wasm;
+  const m = p.mount;
+  if (validateDetachableMount(p).length) throw new Error(validateDetachableMount(p)[0]);
+  const half = m.footWidth / 2;
+  const foot = transformedBox(Manifold, [m.length, m.footWidth, m.footThickness], [-m.length/2, -half, -m.footBottom]);
+  const slotBottom = half - m.tongueThickness - m.travel - .4;
+  const slotTop = half - m.tongueThickness;
+  const cornerRadius = .3;
+  const slotSection = CrossSection.ofPolygons([[
+    [m.latchStart-.6+cornerRadius, slotBottom+cornerRadius], [m.latchEnd-cornerRadius, slotBottom+cornerRadius],
+    [m.latchEnd-cornerRadius, slotTop-cornerRadius], [m.latchStart-.6+cornerRadius, slotTop-cornerRadius]
+  ]], "Positive");
+  const roundedSlot = slotSection.offset(cornerRadius, "Round", 2, 16);
+  slotSection.delete();
+  const slotRaw = roundedSlot.extrude(m.footThickness + .2);
+  roundedSlot.delete();
+  const slot = slotRaw.translate([0,0,-m.footBottom-.1]);
+  slotRaw.delete();
+  const endCut = transformedBox(Manifold, [.6, half-slotBottom+.1, m.footThickness+.2], [m.latchStart-.6, slotBottom, -m.footBottom-.1]);
+  const cuts = unionAndDispose(Manifold, [slot, endCut]);
+  const slottedFoot = foot.subtract(cuts);
+  dispose(foot, cuts);
+  const reach = m.clearance + m.catchReach;
+  const toothSection = CrossSection.ofPolygons([[
+    [m.latchStart, half-.15], [m.latchStart+.45+reach, half-.15],
+    [m.latchStart+.45, half+reach], [m.latchStart, half+reach]
+  ]], "Positive");
+  const toothRaw = toothSection.extrude(m.footThickness);
+  toothSection.delete();
+  const tooth = toothRaw.translate([0,0,-m.footBottom]);
+  toothRaw.delete();
+  const rootWidth = p.contactLength + 2 * p.rootFlare;
+  // 颈部避开舌头的整个回缩区，不能把弹性舌的底部重新连死。
+  const neck = transformedBox(Manifold, [rootWidth, m.neckWidth, m.bridgeTop-m.footBottom+.2], [-rootWidth/2,-m.neckWidth/2,-m.bridgeTop-.1]);
+  const bridge = transformedBox(Manifold, [rootWidth,m.outerWidth,m.bridgeThickness], [-rootWidth/2,-m.outerWidth/2,-m.rootOffset]);
+  const local = { ...p, clipRadius:0, clipCount:1, startAngle:0, spokeBackDepth:p.spokeBackDepth-m.rootOffset };
+  const clawsRaw = buildClipSolids(wasm, local, [0]);
+  const claws = clawsRaw.translate([0,0,-m.rootOffset]);
+  clawsRaw.delete();
+  return unionAndDispose(Manifold, [slottedFoot,tooth,neck,bridge,claws]);
+}
+
+function placeClipPart(solid, p, index) {
+  const moved = solid.translate([p.clipRadius,0,0]);
+  const placed = moved.rotate([0,0,degrees(p.startAngle + 2 * Math.PI * index / p.clipCount)]);
+  moved.delete();
+  return placed;
+}
+
+function buildMountSolids(wasm, p, activeIndices) {
+  if (validateDetachableMount(p).length) throw new Error(validateDetachableMount(p)[0]);
+  const socket = buildDetachableSocket(wasm, p);
+  const placed = activeIndices.map((index) => placeClipPart(socket, p, index));
+  socket.delete();
+  return unionAndDispose(wasm.Manifold, placed);
+}
+
+function printableClipPart(solid) {
+  // 单独侧放，使用者仍需在切片器检查层纹方向、接触面积与支撑；不承诺免支撑。
+  const sideways = solid.rotate([0,90,0]);
+  const bounds = sideways.boundingBox();
+  const grounded = sideways.translate([-(bounds.min[0]+bounds.max[0])/2, -(bounds.min[1]+bounds.max[1])/2, -bounds.min[2]]);
+  sideways.delete();
+  return materialPartFromSolid(grounded, 0, "#ec6a3a", "可更换双爪卡扣（含一体止退舌）");
+}
+
+function addDetachableParts(wasm, p, activeIndices, geometry, coverSolid) {
+  const template = canonicalSolid(buildDetachableClip(wasm, p));
+  const clipParts = [];
+  let occupied = null;
+  try {
+    const sample = printableClipPart(template);
+    occupied = coverSolid.translate([0,0,0]);
+    for (const index of activeIndices) {
+      const placed = placeClipPart(template, p, index);
+      const interference = occupied.intersect(placed);
+      const overlap = interference.volume();
+      interference.delete();
+      if (overlap > .001) { placed.delete(); throw new Error(`C${index+1} 可拆卡扣与盖板、固定座或其他卡扣存在实体干涉`); }
+      const next = occupied.add(placed);
+      occupied.delete();
+      occupied = next;
+      const part = materialPartFromSolid(placed, 0, p.colorPalette[0], `C${index+1} 可更换卡扣`);
+      // 预览区分安装座与替换件，不改变导出的耗材底色。
+      part.triangles.forEach((triangle) => { triangle.color = [.93,.35,.16,1]; });
+      clipParts.push({ ...part, index });
+    }
+    return {
+      ...geometry,
+      coverTriangles:geometry.bodyTriangles,
+      bodyTriangles:[...geometry.bodyTriangles, ...clipParts.flatMap((part) => part.triangles)],
+      clipParts,
+      clipSample:sample,
+      assemblyVerification:{ status:"NoError", componentCount:1+clipParts.length, invalidEdges:0, overlapVolume:0 }
+    };
+  } finally {
+    dispose(occupied, template);
+  }
+}
+
 function rootProtection(wasm, p, activeIndices) {
   const { CrossSection } = wasm;
   const radialWidth = p.contactLength + 2 * p.rootFlare + 4;
   const tangentWidth = p.openingWidth + p.minWall * 2;
-  const rootInner = p.clipRadius - radialWidth / 2;
-  const rootOuter = p.clipRadius + radialWidth / 2;
+  const rootInner = p.clipRadius + (p.mount ? p.mount.radialMin - 2 : -radialWidth / 2);
+  const rootOuter = p.clipRadius + (p.mount ? p.mount.radialMax + 2 : radialWidth / 2);
   const ringInner = p.coverDiameter / 2 - p.outerRingWidth;
   const bridgeOuter = Math.max(rootOuter, ringInner + p.minWall);
   const bridgeHalfWidth = Math.max(p.minWall * 1.5, Math.min(tangentWidth * .32, 5));
@@ -299,14 +489,14 @@ function defaultPattern(wasm, patternRadius) {
   return result;
 }
 
-function maskRectangles(mask, patternRadius) {
+function maskRectangles(mask, patternRadius, value = 1) {
   const { size, data } = mask;
   const rectangles = [];
   const scale = patternRadius * 2 / size;
   for (let row = 0; row < size; row += 1) {
     let start = -1;
     for (let column = 0; column <= size; column += 1) {
-      const filled = column < size && data[row * size + column] === 1;
+      const filled = column < size && data[row * size + column] === value;
       if (filled && start < 0) start = column;
       if (!filled && start >= 0) {
         const x0 = -patternRadius + start * scale;
@@ -412,15 +602,17 @@ function buildCoverSection(wasm, p, activeIndices, mask) {
     if (!kept.length) throw new Error("图案没有留下与外圈连接的盖板实体");
     bodySection = kept.length === 1 ? kept[0] : CrossSection.union(kept);
     if (kept.length > 1) dispose(kept);
-  } else {
+  } else if (p.mode === "relief") {
     bodySection = outer;
     reliefSection = patternWithoutRoots;
+  } else {
+    bodySection = outer;
   }
   const contourSource = p.mode === "cut" ? bodySection : reliefSection;
   report.contourCount = contourSource ? contourSource.toPolygons().reduce((sum, polygon) => sum + polygon.length, 0) : 0;
   if (p.mode === "cut") outer.delete();
   dispose(inner, ring, protection, protectionGuard, anchors);
-  if (p.mode === "cut") patternWithoutRoots.delete();
+  if (p.mode !== "relief") patternWithoutRoots.delete();
   return { bodySection, reliefSection, report };
 }
 
@@ -442,7 +634,7 @@ function buildOuterSkirt(wasm, p) {
   return skirt;
 }
 
-function verifySolid(solid) {
+function verifySolid(solid, strictCoordinates = true) {
   const status = solid.status();
   if (status !== "NoError") throw new Error(`流形内核返回 ${status}`);
   const parts = solid.decompose();
@@ -470,12 +662,13 @@ function verifySolid(solid) {
   }
   const indexedInvalidEdges = [...indexedEdges.values()].filter((count) => count !== 2).length;
   const geometricInvalidEdges = [...geometricEdges.values()].filter((count) => count !== 2).length;
-  const invalidEdges = indexedInvalidEdges + geometricInvalidEdges;
-  if (invalidEdges) throw new Error(`模型存在 ${invalidEdges} 条非流形边`);
+  const invalidEdges = indexedInvalidEdges;
+  if (indexedInvalidEdges || strictCoordinates && geometricInvalidEdges) throw new Error(`模型存在 ${indexedInvalidEdges + geometricInvalidEdges} 条非流形边（索引 ${indexedInvalidEdges} / 坐标 ${geometricInvalidEdges}）`);
   return {
     status,
     componentCount,
     invalidEdges,
+    geometricEdgeWarnings:geometricInvalidEdges,
     triangleCount:mesh.triVerts.length / 3,
     vertexCount:mesh.vertProperties.length / mesh.numProp,
     genus:solid.genus(),
@@ -514,6 +707,202 @@ function indexedMesh(mesh) {
   return { vertices, triangles };
 }
 
+function hexToRgba(hex) {
+  const normalized = /^#[0-9a-f]{6}$/i.test(hex || "") ? hex.slice(1) : "ec6a3a";
+  return [0, 2, 4].map((offset) => parseInt(normalized.slice(offset, offset + 2), 16) / 255).concat(1);
+}
+
+function canonicalSolid(solid) {
+  const original = solid.asOriginal();
+  solid.delete();
+  const canonical = original.simplify(.001);
+  original.delete();
+  return canonical;
+}
+
+function weldSolid(Manifold, solid) {
+  const mesh = solid.getMesh();
+  mesh.merge();
+  const welded = Manifold.ofMesh(mesh);
+  solid.delete();
+  return welded;
+}
+
+function materialPartFromSolid(solid, materialIndex, color, name, simplify = true) {
+  let canonical;
+  if (simplify) canonical = canonicalSolid(solid);
+  else canonical = solid;
+  let verification;
+  try {
+    verification = verifySolid(canonical, simplify);
+  } catch (error) {
+    canonical.delete();
+    throw new Error(`${name}：${error instanceof Error ? error.message : String(error)}`);
+  }
+  const result = {
+    materialIndex,
+    color,
+    name,
+    triangles:meshTriangles(verification.mesh, hexToRgba(color)),
+    exportMesh:indexedMesh(verification.mesh),
+    verification:{ ...verification, mesh:undefined }
+  };
+  canonical.delete();
+  return result;
+}
+
+function makeColorSection(wasm, p, mask, label, outer) {
+  const { CrossSection } = wasm;
+  const rectangles = maskRectangles(mask, p.coverDiameter / 2, label);
+  if (!rectangles.length) return null;
+  const raw = new CrossSection(rectangles, "Positive");
+  const simplified = raw.simplify(Math.max(.025, p.coverDiameter / 10000));
+  raw.delete();
+  const clipped = simplified.intersect(outer);
+  simplified.delete();
+  if (Math.abs(clipped.area()) < .01) {
+    clipped.delete();
+    return null;
+  }
+  return clipped;
+}
+
+function addBodyAttachments(wasm, p, activeIndices, cover) {
+  let body = cover;
+  const skirt = buildOuterSkirt(wasm, p);
+  if (skirt) {
+    const united = body.add(skirt);
+    dispose(body, skirt);
+    body = united;
+  }
+  const clips = p.mount ? buildMountSolids(wasm, p, activeIndices) : buildClipSolids(wasm, p, activeIndices);
+  const joined = body.add(clips);
+  dispose(body, clips);
+  return joined;
+}
+
+async function buildColorHubcapGeometry(wasm, p, activeIndices, mask) {
+  const { Manifold, CrossSection } = wasm;
+  const radius = p.coverDiameter / 2;
+  const segments = clamp(Math.ceil(Math.PI * 2 * radius / 1.5), 160, 420);
+  const palette = p.colorPalette.slice(0, 8);
+  const masterCover = Manifold.cylinder(p.coverThickness, radius, radius, segments);
+  const masterSolid = canonicalSolid(addBodyAttachments(wasm, p, activeIndices, masterCover));
+  const verification = verifySolid(masterSolid);
+  const exportMesh = indexedMesh(verification.mesh);
+  const exportTriangles = meshTriangles(verification.mesh, hexToRgba(palette[0]));
+
+  const outer = CrossSection.circle(radius, segments);
+  const colorSections = [];
+  let allocated = null;
+  if (mask?.data?.length) {
+    for (let label = 1; label < palette.length; label += 1) {
+      let section = makeColorSection(wasm, p, mask, label, outer);
+      if (!section) continue;
+      if (allocated) {
+        const disjoint = section.subtract(allocated);
+        section.delete();
+        section = disjoint;
+      }
+      if (Math.abs(section.area()) < .01) { section.delete(); continue; }
+      colorSections.push({ label, section });
+      const nextAllocated = allocated ? CrossSection.union([allocated, section]) : CrossSection.union([section]);
+      if (allocated) allocated.delete();
+      allocated = nextAllocated;
+    }
+  }
+  const occupied = allocated;
+  const materialHeight = p.colorLayerHeight;
+  const materialBottom = p.coverThickness - p.colorLayerHeight;
+  const baseCover = Manifold.cylinder(p.coverThickness, radius, radius, segments);
+  let baseBody = addBodyAttachments(wasm, p, activeIndices, baseCover);
+  if (occupied) {
+    const cutRaw = occupied.extrude(materialHeight + .01);
+    const cut = cutRaw.translate([0, 0, materialBottom]);
+    cutRaw.delete();
+    const carved = baseBody.subtract(cut);
+    dispose(baseBody, cut);
+    baseBody = carved;
+  }
+  const baseSolids = baseBody.decompose();
+  baseBody.delete();
+  const printableBaseSolids = baseSolids.filter((solid) => {
+    if (solid.volume() > .001 && solid.getMesh().triVerts.length) return true;
+    solid.delete();
+    return false;
+  });
+  const materialParts = printableBaseSolids.map((solid, index) => materialPartFromSolid(
+    // 先按实际导出精度焊接再规范化，清掉裁圆边界在浮点量化后形成的重合边。
+    p.mount ? canonicalSolid(weldSolid(Manifold, canonicalSolid(solid))) : solid,
+    0,
+    palette[0],
+    index === 0 ? "背景底色与结构主体" : `背景底色区域 ${index + 1}`,
+    false
+  ));
+  let colorComponentCount = 0;
+  for (const entry of colorSections) {
+    const components = entry.section.decompose();
+    components.forEach((component, componentIndex) => {
+      const raw = component.extrude(materialHeight);
+      component.delete();
+      const solid = raw.translate([0, 0, materialBottom]);
+      raw.delete();
+      const normalized = weldSolid(Manifold, canonicalSolid(solid));
+      const solidParts = normalized.decompose();
+      normalized.delete();
+      colorComponentCount += solidParts.length;
+      if (materialParts.length + colorComponentCount > 400) {
+        dispose(solidParts);
+        throw new Error("彩色色块超过 400 个，请提高最小色块宽度或减少颜色数量");
+      }
+      solidParts.forEach((solidPart, solidPartIndex) => {
+        materialParts.push(materialPartFromSolid(
+          p.mount ? canonicalSolid(weldSolid(Manifold, canonicalSolid(solidPart))) : solidPart,
+          entry.label,
+          palette[entry.label],
+          `颜色 ${entry.label + 1} · 区域 ${componentIndex + 1}.${solidPartIndex + 1}`,
+          false
+        ));
+      });
+    });
+  }
+  const materialVolume = materialParts.reduce((sum, part) => sum + part.verification.volume, 0);
+  const volumeDelta = Math.abs(materialVolume - verification.volume);
+  if (volumeDelta > Math.max(.05, verification.volume * 1e-5)) {
+    throw new Error(`分色实体与完整母体体积不一致（差值 ${volumeDelta.toFixed(3)} mm³）`);
+  }
+  let partitionDifference = 0, partitionOverlap = 0;
+  if (p.mount) {
+    const solids = materialParts.map((part) => Manifold.ofMesh({
+      numProp:3,
+      vertProperties:Float32Array.from(part.exportMesh.vertices.flat()),
+      triVerts:Uint32Array.from(part.exportMesh.triangles.flat())
+    }));
+    const combined = unionAndDispose(Manifold, solids);
+    const missing = masterSolid.subtract(combined), extra = combined.subtract(masterSolid);
+    partitionDifference = Math.abs(missing.volume()) + Math.abs(extra.volume());
+    partitionOverlap = Math.max(0, materialVolume - combined.volume());
+    const status = combined.status();
+    dispose(combined, missing, extra);
+    const tolerance = Math.max(.05, verification.volume * 1e-5);
+    if (status !== "NoError" || partitionDifference > tolerance || partitionOverlap > tolerance) throw new Error("分色组合与完整盖板不一致，请简化图案后重试");
+  }
+  const bodyTriangles = materialParts.flatMap((part) => part.triangles);
+  dispose(outer, occupied);
+  colorSections.forEach((entry) => entry.section.delete());
+  const geometry = {
+    bodyTriangles,
+    exportTriangles,
+    exportMesh,
+    materialParts,
+    referenceTriangles:referenceTriangles(p, activeIndices),
+    report:{ wallAdjusted:false, islandsRemoved:0, contourCount:colorComponentCount, colorPartCount:materialParts.length, volumeDelta, partitionDifference, partitionOverlap },
+    verification:{ ...verification, mesh:undefined }
+  };
+  try { return p.mount ? addDetachableParts(wasm, p, activeIndices, geometry, masterSolid) : geometry; }
+  finally { masterSolid.delete(); }
+}
+
 function referenceTriangles(p, activeIndices) {
   const triangles = [];
   const addBox = (angle, radial0, radial1, tangent0, tangent1, z0, z1, color) => {
@@ -542,6 +931,7 @@ function referenceTriangles(p, activeIndices) {
 export async function buildHubcapGeometry(p, activeIndices, mask) {
   const wasm = await initializeGeometryKernel();
   const { Manifold } = wasm;
+  if (p.mode === "color") return buildColorHubcapGeometry(wasm, p, activeIndices, mask);
   const { bodySection, reliefSection, report } = buildCoverSection(wasm, p, activeIndices, mask);
   let cover = bodySection.extrude(p.coverThickness);
   bodySection.delete();
@@ -561,7 +951,7 @@ export async function buildHubcapGeometry(p, activeIndices, mask) {
     dispose(cover, skirt);
     cover = united;
   }
-  const clips = buildClipSolids(wasm, p, activeIndices);
+  const clips = p.mount ? buildMountSolids(wasm, p, activeIndices) : buildClipSolids(wasm, p, activeIndices);
   const joined = cover.add(clips);
   dispose(cover, clips);
   const original = joined.asOriginal();
@@ -570,21 +960,29 @@ export async function buildHubcapGeometry(p, activeIndices, mask) {
   const solid = original.simplify(.001);
   original.delete();
   const verification = verifySolid(solid);
-  const bodyTriangles = meshTriangles(verification.mesh);
+  const bodyTriangles = meshTriangles(verification.mesh, p.mount ? [.16,.47,.45,1] : undefined);
   const exportMesh = indexedMesh(verification.mesh);
-  solid.delete();
-  return {
+  const geometry = {
     bodyTriangles,
+    exportTriangles:bodyTriangles,
     exportMesh,
+    materialParts:[],
     referenceTriangles:referenceTriangles(p, activeIndices),
     report,
     verification:{ ...verification, mesh:undefined }
   };
+  try { return p.mount ? addDetachableParts(wasm, p, activeIndices, geometry, solid) : geometry; }
+  finally { solid.delete(); }
 }
 
 export async function buildTrialClipGeometry(p) {
   const wasm = await initializeGeometryKernel();
   const { Manifold } = wasm;
+  if (p.mount) {
+    const solid = canonicalSolid(buildDetachableClip(wasm, p));
+    try { return printableClipPart(solid); }
+    finally { solid.delete(); }
+  }
   const baseRadius = trialBaseRadius(p);
   const base = Manifold.cylinder(p.coverThickness, baseRadius, baseRadius, 120);
   const clips = buildClipSolids(wasm, { ...p, clipRadius:0, clipCount:1, startAngle:0 }, [0]);
@@ -606,8 +1004,23 @@ export async function buildTrialClipGeometry(p) {
 }
 
 export function trialBaseRadius(p) {
+  if (p.mount) return Math.hypot(Math.max(-p.mount.radialMin, p.mount.radialMax)+3, p.mount.outerWidth/2+3);
   return Math.hypot(
     p.contactLength / 2 + p.rootFlare + 3,
     p.openingWidth / 2 + p.hookReach + 3
   );
+}
+
+export async function buildSocketTrialGeometry(p) {
+  const wasm = await initializeGeometryKernel();
+  if (!p.mount) throw new Error("请先选择可拆卸卡扣");
+  const radius = trialBaseRadius(p);
+  const base = wasm.Manifold.cylinder(p.coverThickness, radius, radius, 120);
+  const socket = buildDetachableSocket(wasm, p);
+  const joined = unionAndDispose(wasm.Manifold, [base, socket]);
+  const rotated = joined.rotate([180,0,0]);
+  joined.delete();
+  const grounded = rotated.translate([0,0,p.coverThickness]);
+  rotated.delete();
+  return materialPartFromSolid(grounded, 0, "#2e7771", "单组刚性滑槽试装座");
 }
