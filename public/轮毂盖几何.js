@@ -17,6 +17,31 @@ export function initializeGeometryKernel() {
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 const degrees = (radians) => radians * 180 / Math.PI;
+const detachableRootOverlap = .2;
+const socketRibFloorOverlap = .12;
+
+function estimateTaperedStrain(rootWidth, tipWidth, rootThickness, tipThickness, length, deflection) {
+  // 以变截面悬臂的弯曲柔度反算载荷，再取各截面的最大表面应变。
+  if (length <= 0) return Infinity;
+  const samples = 64;
+  const step = length / samples;
+  let compliance = 0;
+  const sections = [];
+  for (let index = 0; index < samples; index += 1) {
+    const x = (index + .5) * step;
+    const ratio = x / length;
+    const width = rootWidth + (tipWidth - rootWidth) * ratio;
+    const thickness = rootThickness + (tipThickness - rootThickness) * ratio;
+    const inertia = width * thickness ** 3 / 12;
+    const momentArm = length - x;
+    compliance += momentArm ** 2 / inertia * step;
+    sections.push({ thickness, inertia, momentArm });
+  }
+  const loadOverModulus = deflection / compliance;
+  return Math.max(...sections.map(({ thickness, inertia, momentArm }) =>
+    loadOverModulus * momentArm * thickness / (2 * inertia)
+  )) * 100;
+}
 
 export function deriveStructure(raw, custom = null) {
   const strength = {
@@ -50,8 +75,8 @@ export function deriveStructure(raw, custom = null) {
   result.attachmentMode = raw.attachmentMode === "detachable" ? "detachable" : "integrated";
   result.rootFlare = clamp(result.legThickness * strength.flareRatio, 1, 2.6);
   result.tipThickness = Math.max(1.2, result.legThickness * .72);
-  result.clawRootThickness = clamp(result.legThickness * 1.8, 2.8, 3.8);
-  result.clawTipThickness = clamp(result.legThickness, 1.6, 2.2);
+  result.clawRootThickness = clamp(result.legThickness * 2, 3.2, 4.2);
+  result.clawTipThickness = clamp(result.legThickness * .95, 1.8, 2.2);
   result.tipWidth = Math.max(8, result.contactLength * .82);
   const defaultTopWidth = Math.min(result.contactLength - .5, Math.round(result.contactLength * .7 * 2) / 2);
   result.topWidth = clamp(result.topWidth ?? defaultTopWidth, 4, 30);
@@ -60,18 +85,34 @@ export function deriveStructure(raw, custom = null) {
   result.insertionRampHeight = result.hookReach + result.sideClearance;
   result.hookHeight = result.insertionRampHeight + result.hookLandHeight;
   result.flexPerJaw = Math.max(0, result.hookReach);
-  result.mount = result.attachmentMode === "detachable" ? deriveDetachableMount(result, raw.mountClearance ?? .15, raw.mountRibHeight ?? .35) : null;
-  result.freeLength = Math.max(2, raw.spokeBackDepth - (result.mount ? result.mount.rootOffset : result.rootHeight));
+  result.mount = result.attachmentMode === "detachable" ? deriveDetachableMount(result, raw.mountClearance ?? .15, raw.mountRibHeight ?? .4) : null;
+  const detachableArmLength = result.mount ? Math.max(0, result.spokeBackDepth - result.mount.rootOffset) : 0;
+  result.rootRigidLength = result.mount ? clamp(detachableArmLength * .28, 3, 5) : 0;
+  const rigidRatio = detachableArmLength > 0 ? clamp(result.rootRigidLength / detachableArmLength, 0, 1) : 0;
+  result.rootRigidWidth = result.contactLength + (result.topWidth - result.contactLength) * rigidRatio;
+  result.flexibleLength = result.mount ? Math.max(0, detachableArmLength - result.rootRigidLength) : 0;
+  const desiredFilletRadius = clamp(result.clawRootThickness * .75, 2.4, 3.4);
+  result.rootFilletRadius = result.mount
+    ? Math.min(desiredFilletRadius, Math.max(1.2, result.rootRigidLength - .25))
+    : clamp(result.clawRootThickness * .55, 1.4, 2.2);
+  result.freeLength = result.mount
+    ? Math.max(.01, result.flexibleLength)
+    : Math.max(2, result.spokeBackDepth - result.rootHeight);
   result.insertionAngle = Math.atan2(result.hookReach + result.sideClearance, result.insertionRampHeight) * 180 / Math.PI;
   result.retentionArea = result.hookReach * (result.mount ? result.topWidth : result.tipWidth);
-  // 仍使用等截面悬臂公式，渐变爪的实际应变会更低，因此这是保守筛查值。
-  const strainThickness = result.mount ? result.clawRootThickness : result.legThickness;
-  result.estimatedStrain = 1.5 * strainThickness * result.flexPerJaw / (result.freeLength * result.freeLength) * 100;
+  result.estimatedStrain = result.mount
+    ? estimateTaperedStrain(
+      result.rootRigidWidth, result.topWidth,
+      result.clawRootThickness, result.clawTipThickness,
+      result.flexibleLength, result.flexPerJaw
+    )
+    : 1.5 * result.legThickness * result.flexPerJaw / (result.freeLength * result.freeLength) * 100;
   return result;
 }
 
 function deriveDetachableMount(p, clearance, ribHeight) {
-  const wall = 1.6, footThickness = 1.6, lipThickness = 1.2, bridgeThickness = 1.6;
+  const wall = 1.6, footThickness = 1.6, lipThickness = 1.2;
+  const bridgeThickness = clamp(p.clawRootThickness * .8, 3, 3.6);
   const outerWidth = p.openingWidth - p.sideClearance * 2;
   const footWidth = outerWidth - 2 * (wall + clearance);
   // 安装头、承力桥与爪片根部共用同一个底面宽度，不再产生缩进或外凸台阶。
@@ -87,19 +128,27 @@ function deriveDetachableMount(p, clearance, ribHeight) {
   const bridgeWidth = outerWidth;
   const footShift = 0;
   const footMin = -length / 2;
-  // 滑块完全推入后，尾端越过入口单侧小棱；正向使用 30° 缓坡，反向使用约 45° 坡面。
-  const insertionRun = ribHeight / Math.tan(Math.PI / 6);
-  const removalRun = ribHeight;
+  // 横棱位于滑槽底面入口；坡长按完整截面高度计算，保证实际导入坡不超过 30°、防退坡不超过 45°。
+  const ribProfileHeight = ribHeight + socketRibFloorOverlap;
+  const insertionRun = Math.max(.8, ribProfileHeight / Math.tan(Math.PI / 6));
+  const removalRun = Math.max(.4, ribProfileHeight);
   const ribEnd = footMin - .15;
   const ribPeak = ribEnd - removalRun;
   const ribStart = ribPeak - insertionRun;
-  const ribInterference = Math.max(0, ribHeight - clearance);
+  const ribSpan = Math.max(6, footWidth - 2);
+  const ribBaseWidth = ribEnd - ribStart;
+  const ribInsertionAngle = degrees(Math.atan2(ribProfileHeight, insertionRun));
+  const ribRemovalAngle = degrees(Math.atan2(ribProfileHeight, removalRun));
+  const ribTailClearance = footMin - ribEnd;
+  // 滑块可先占用上下两侧装配间隙，剩余值才是需要零件弹性让位的有效压入量。
+  const ribInterference = Math.max(0, ribHeight - 2 * clearance);
   const radialMin = ribStart - .4;
   const radialMax = p.contactLength / 2 + clearance + wall;
   return {
     clearance, wall, footThickness, lipThickness, bridgeThickness, outerWidth, footWidth, length,
     footBottom, socketDepth, bridgeTop, rootOffset, lipOverlap, lipInner, neckWidth, bridgeWidth, footShift,
-    ribHeight, ribStart, ribPeak, ribEnd, ribInterference,
+    ribHeight, ribProfileHeight, ribStart, ribPeak, ribEnd, ribSpan, ribBaseWidth,
+    ribInsertionAngle, ribRemovalAngle, ribTailClearance, ribInterference,
     radialMin, radialMax
   };
 }
@@ -109,10 +158,11 @@ function validateDetachableMount(p) {
   if (!m) return [];
   const errors = [];
   if (!Number.isFinite(m.clearance) || m.clearance < .05 || m.clearance > .3) errors.push("滑块单侧摩擦间隙必须在 0.05–0.30 mm 之间");
-  if (!Number.isFinite(m.ribHeight) || m.ribHeight < .15 || m.ribHeight > .6) errors.push("入口防退棱高度必须在 0.15–0.60 mm 之间");
+  if (!Number.isFinite(m.ribHeight) || m.ribHeight < .25 || m.ribHeight > .6) errors.push("入口横向防退棱高度必须在 0.25–0.60 mm 之间");
   if (m.footWidth < 8 || m.neckWidth < 8) errors.push("轮辐开口过窄，无法为实心滑块、宽根颈和刚性固定座保留足够空间");
-  if (p.spokeBackDepth <= m.rootOffset + 2) errors.push("总深度不足以容纳安装座和弹性爪段，请增大总深度或使用一体爪钩");
-  if (m.ribInterference > .45) errors.push("入口防退棱压入量超过 0.45 mm，固定座侧壁可能无法安全让位");
+  if (p.flexibleLength < 6) errors.push("总深度不足：加厚根部后至少需要保留 6 mm 弹性渐缩段，请增大总深度或使用一体爪钩");
+  if (m.ribInterference < .049) errors.push("入口横向防退棱未高出上下总间隙至少 0.05 mm，无法形成可靠防退");
+  if (m.ribInterference > .3) errors.push("入口横向防退棱有效压入量超过 0.30 mm，滑块可能无法安全越过");
   return errors;
 }
 
@@ -176,8 +226,8 @@ export function validateDesign(p, activeIndices, patternReport = null) {
   const hookThickness = p.mount ? p.clawTipThickness : p.legThickness;
   if (p.hookReach > hookThickness * 1.25) errors.push("倒钩外伸量相对爪片末端厚度过大，末端应力过高");
   if (p.retentionArea < 6) warnings.push("单爪承力面积偏小，建议增加倒钩外伸量或爪片径向宽度");
-  if (p.estimatedStrain > 3) errors.push(`预计卡爪应变 ${p.estimatedStrain.toFixed(1)}%，超过 PETG 设计筛查上限 3%`);
-  else if (p.estimatedStrain > 2) warnings.push(`预计卡爪应变 ${p.estimatedStrain.toFixed(1)}%，建议先打印单组试装`);
+  if (Number.isFinite(p.estimatedStrain) && p.estimatedStrain > 3) errors.push(`预计卡爪应变 ${p.estimatedStrain.toFixed(1)}%，超过 PETG 设计筛查上限 3%`);
+  else if (Number.isFinite(p.estimatedStrain) && p.estimatedStrain > 2) warnings.push(`预计卡爪应变 ${p.estimatedStrain.toFixed(1)}%，建议先打印单组试装`);
   if (p.spokeBackDepth / p.legThickness > 24) errors.push("卡爪长宽比过大，渐变结构仍不足以控制摆动");
   else if (p.spokeBackDepth / p.legThickness > 16) warnings.push("长卡爪较柔，请检查振动摆动和疲劳强度");
   if (m.enabled > 8) warnings.push("启用卡扣较多，拆装阻力可能明显增加");
@@ -195,8 +245,8 @@ export function validateDesign(p, activeIndices, patternReport = null) {
     if (p.skirtHeight > 0 && mountingRadius > m.coverRadius - p.skirtThickness - .5) errors.push("可拆固定座与裙边空间冲突，请减小安装半径或裙边厚度");
     if (activeIndices.some((first, i) => activeIndices.slice(i + 1).some((second) => mountFootprintsOverlap(p, first, second)))) errors.push("相邻可拆固定座或卡爪空间重叠，请减少组数或增大安装半径");
     if (p.mount.clearance > .2) warnings.push("滑块摩擦间隙大于 0.20 mm，保持力可能不足，请先配对试印");
-    if (p.mount.ribInterference > .3) warnings.push("入口防退棱压入量超过 0.30 mm，拆装阻力可能较大");
-    warnings.push("可拆结构需先配对试印：从圆心向外推入，滑块尾端越过入口小棱；拆下整盖后可用持续拉力反向取出");
+    if (p.mount.ribInterference > .2) warnings.push("入口横向防退棱有效压入量超过 0.20 mm，拆装阻力可能较大");
+    warnings.push("可拆结构需先配对试印：从圆心向外推入，滑块尾端越过底面横棱；拆下整盖后可用持续拉力反向取出");
   }
   return { valid:errors.length === 0, errors, warnings };
 }
@@ -210,7 +260,7 @@ export function validateTrialClip(p) {
   if (p.openingWidth - 2 * (p.sideClearance + jawThickness) < 2) errors.push("轮辐开口无法为双爪保留足够弹性间隙");
   const hookThickness = p.mount ? p.clawTipThickness : p.legThickness;
   if (p.hookReach < .3 || p.hookReach > hookThickness * 1.25) errors.push("倒钩外伸量无效");
-  if (p.estimatedStrain > 3) errors.push("预计卡爪应变超过 3%");
+  if (Number.isFinite(p.estimatedStrain) && p.estimatedStrain > 3) errors.push("预计卡爪应变超过 3%");
   errors.push(...validateDetachableMount(p));
   return { valid:errors.length === 0, errors };
 }
@@ -295,19 +345,80 @@ function buildTaperedArm(wasm, p, angle, side) {
 function buildSupportFreeArm(wasm, p, angle, side) {
   const { Manifold } = wasm;
   const angleDegrees = degrees(angle);
-  const rootOverlap = .2;
+  const rootOverlap = detachableRootOverlap;
   const tipOverlap = Math.min(.3, p.hookLandHeight / 2);
-  // 根部截面与承力桥完整相交；底面宽度精确等于底座宽度，厚度也在根部自动加大。
-  // 根、端两个规则截面直接做凸包，四个外侧面沿总深度各是一张连续平面，不生成中间棱或细颈。
+  const sectionDepth = Math.min(.3, p.layerHeight * 1.5);
+  // 根部截面与加厚承力桥完整相交；底面宽度精确等于底座宽度。
+  // 先保留一段等截面的刚性根段承担弯矩，再从根段末端以连续平面渐缩到弹性顶端。
   const root = clawSection(
     Manifold, p, angleDegrees, side, p.contactLength, p.clawRootThickness,
     -rootOverlap, p.mount.bridgeThickness + rootOverlap
+  );
+  const rigidEnd = clawSection(
+    Manifold, p, angleDegrees, side, p.rootRigidWidth, p.clawRootThickness,
+    -p.rootRigidLength, sectionDepth
+  );
+  const rigidBody = hullPair(Manifold, root, rigidEnd);
+  const taperStart = clawSection(
+    Manifold, p, angleDegrees, side, p.rootRigidWidth, p.clawRootThickness,
+    -p.rootRigidLength, sectionDepth
   );
   const tip = clawSection(
     Manifold, p, angleDegrees, side, p.topWidth, p.clawTipThickness,
     -p.spokeBackDepth - tipOverlap, tipOverlap + .2
   );
-  return hullPair(Manifold, root, tip);
+  const elasticTaper = hullPair(Manifold, taperStart, tip);
+  return unionAndDispose(Manifold, [rigidBody, elasticTaper]);
+}
+
+function buildDetachableRootFillet(wasm, p, angle, side) {
+  const { Manifold } = wasm;
+  const edge = p.openingWidth / 2;
+  const outerFace = edge - p.sideClearance;
+  const rootInnerFace = outerFace - p.clawRootThickness;
+  const radius = Math.min(p.rootFilletRadius, p.rootRigidLength - .2);
+  const centerT = rootInnerFace - radius;
+  const overlap = .12;
+  const profile = [{ t:centerT, z:overlap }];
+  // 四分之一圆同时与承力桥底面和刚性根段内侧面相切，避免连接处出现折线。
+  for (let step = 0; step <= 12; step += 1) {
+    const theta = Math.PI / 2 * (1 - step / 12);
+    profile.push({
+      t:centerT + radius * Math.cos(theta),
+      z:-radius + radius * Math.sin(theta)
+    });
+  }
+  profile.push(
+    { t:rootInnerFace + overlap, z:-radius },
+    { t:rootInnerFace + overlap, z:overlap }
+  );
+  const oriented = side > 0 ? profile : profile.map((point) => ({ t:-point.t, z:point.z })).reverse();
+  const fillet = manifoldFromProfilePrism(
+    wasm,
+    angle,
+    p.clipRadius - p.contactLength / 2,
+    p.clipRadius + p.contactLength / 2,
+    oriented
+  );
+  const tangentSpan = p.openingWidth + p.clawRootThickness * 2;
+  const angleDegrees = degrees(angle);
+  const rootEnvelope = transformedBox(
+    Manifold,
+    [p.contactLength, tangentSpan, p.mount.bridgeThickness + detachableRootOverlap],
+    [p.clipRadius - p.contactLength / 2, -tangentSpan / 2, -detachableRootOverlap],
+    angleDegrees
+  );
+  const rigidEnvelope = transformedBox(
+    Manifold,
+    [p.rootRigidWidth, tangentSpan, .3],
+    [p.clipRadius - p.rootRigidWidth / 2, -tangentSpan / 2, -p.rootRigidLength],
+    angleDegrees
+  );
+  // 圆角服从底宽到顶宽的同一直线包络，径向两端不会出现折线或尖薄凸片。
+  const radialEnvelope = hullPair(Manifold, rootEnvelope, rigidEnvelope);
+  const clipped = fillet.intersect(radialEnvelope);
+  dispose(fillet, radialEnvelope);
+  return clipped;
 }
 
 function buildHook(wasm, p, angle, side) {
@@ -365,6 +476,7 @@ function buildClipSolids(wasm, p, activeIndices) {
     const parts = [];
     [-1, 1].forEach((side) => {
       parts.push(p.mount ? buildSupportFreeArm(wasm, p, angle, side) : buildTaperedArm(wasm, p, angle, side));
+      if (p.mount) parts.push(buildDetachableRootFillet(wasm, p, angle, side));
       parts.push(buildHook(wasm, p, angle, side));
     });
     return unionAndDispose(Manifold, parts);
@@ -382,18 +494,23 @@ function buildDetachableSocket(wasm, p) {
     pieces.push(box(m.radialMin, m.radialMax, side > 0 ? inner : -outer, side > 0 ? outer : -inner, -m.socketDepth, .12));
     pieces.push(box(m.radialMin, m.radialMax, side > 0 ? m.lipInner : -outer, side > 0 ? outer : -m.lipInner, -m.socketDepth, -m.footBottom - m.clearance));
   });
-  const wallInner = half + m.clearance;
   const ribSection = CrossSection.ofPolygons([[
-    [m.ribStart, wallInner + .12],
-    [m.ribPeak, wallInner - m.ribHeight],
-    [m.ribEnd, wallInner + .12]
+    [m.ribStart, socketRibFloorOverlap],
+    [m.ribPeak, -m.ribHeight],
+    [m.ribEnd, socketRibFloorOverlap]
   ]], "Positive");
-  const ribRaw = Manifold.extrude(ribSection, m.footThickness + .2);
+  const ribRaw = Manifold.extrude(ribSection, m.ribSpan);
   ribSection.delete();
-  const rib = ribRaw.translate([0,0,-m.footBottom-.1]);
+  // 截面位于径向-轴向平面，再沿切向展开为横跨滑块入口的连续底面棱。
+  const rib = ribRaw.transform([
+    1,0,0,0,
+    0,0,1,0,
+    0,1,0,0,
+    0,-m.ribSpan/2,0,1
+  ]);
   ribRaw.delete();
   pieces.push(rib);
-  // 固定座入口只保留一条单侧缓坡小棱；滑块完全推入后尾端越过它，不再使用侧窗和弹性卡齿。
+  // 固定座底面入口只保留一条横向缓坡棱；滑块完全推入后尾端越过它。
   return unionAndDispose(Manifold, pieces);
 }
 
@@ -962,6 +1079,20 @@ function referenceTriangles(p, activeIndices) {
     addBox(angle, p.clipRadius-radialLength/2, p.clipRadius+radialLength/2, halfOpening, halfOpening+edgeWidth, -p.spokeBackDepth, 0, [.10,.44,.42,.18]);
     addBox(angle, p.clipRadius-radialLength/2, p.clipRadius+radialLength/2, -halfOpening-edgeWidth-1, -halfOpening, -p.spokeBackDepth-.35, -p.spokeBackDepth, [.08,.30,.29,.28]);
     addBox(angle, p.clipRadius-radialLength/2, p.clipRadius+radialLength/2, halfOpening, halfOpening+edgeWidth+1, -p.spokeBackDepth-.35, -p.spokeBackDepth, [.08,.30,.29,.28]);
+    if (p.mount) {
+      const tail = p.clipRadius - p.mount.length / 2;
+      // 黄色细线只标记滑块完全到位后的尾端，不进入 STL/3MF。
+      addBox(
+        angle,
+        tail - .13,
+        tail - .02,
+        -p.mount.footWidth / 2 - .5,
+        p.mount.footWidth / 2 + .5,
+        -p.mount.socketDepth - .18,
+        .3,
+        [1,.78,.04,1]
+      );
+    }
   });
   return triangles;
 }

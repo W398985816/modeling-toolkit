@@ -451,15 +451,15 @@
             </div>
           </div>
           <div id="detachableSettings" hidden>
-            <p class="control-note">分体双爪采用整面共平侧放：爪根自动加厚，并沿卡扣总深度连续收薄；实心规则滑块通过宽根过渡连接承力桥，不使用弹舌、侧窗或卡齿。</p>
+            <p class="control-note">分体双爪采用整面共平侧放：加厚承力桥连接短刚性根段，随后才连续渐缩到弹性顶端；爪片与承力桥之间使用相切圆角过渡。实心规则滑块不开槽。</p>
             <div class="control"><label for="mountClearance">滑块单侧摩擦间隙</label><input id="mountClearance" type="number" min="0.05" max="0.3" step="0.05" value="0.15"><input data-pair="mountClearance" type="range" min="0.05" max="0.3" step="0.05" value="0.15"><p class="control-note">控制实心滑块与固定座侧壁的配合；建议先下载卡扣与小型试装座配对试印。</p></div>
-            <div class="control"><label for="mountRibHeight">入口防退棱高度</label><input id="mountRibHeight" type="number" min="0.15" max="0.6" step="0.05" value="0.35"><input data-pair="mountRibHeight" type="range" min="0.15" max="0.6" step="0.05" value="0.35"><p class="control-note">固定座入口仅一侧生成小棱；数值越大，意外退出越难，手动拆卸阻力也越大。</p></div>
+            <div class="control"><label for="mountRibHeight">入口横向防退棱高度</label><input id="mountRibHeight" type="number" min="0.25" max="0.6" step="0.05" value="0.4"><input data-pair="mountRibHeight" type="range" min="0.25" max="0.6" step="0.05" value="0.4"><p class="control-note">横棱位于固定座滑槽入口的空位，滑块到位后它留在尾端外侧，不会持续顶住滑块底面。</p></div>
             <div class="position-readout">
               <div><span>固定座占用深度</span><strong id="mountDepth">—</strong></div>
-              <div><span>防退棱压入量</span><strong id="ribInterference">—</strong></div>
+              <div><span>横棱有效压入量</span><strong id="ribInterference">—</strong></div>
               <div class="wide"><span>自动分体结构尺寸</span><strong id="mountDimensions">—</strong></div>
             </div>
-            <p class="control-note">从圆心向外推入，滑块尾端完全越过入口小棱后由侧壁摩擦和小棱共同防退；需要更换时先拆下整盖，再用持续拉力反向越过约 45° 坡面。卡扣 STL 已按共平侧面朝下排放。</p>
+            <p class="control-note">从圆心向外推入，滑块尾端完全越过底面横棱后由配合摩擦和横棱共同防退；需要更换时先拆下整盖，再用持续拉力反向越过约 45° 坡面。卡扣 STL 已按共平侧面朝下排放。</p>
           </div>
           <div class="control"><label for="clipRadius">中心到卡扣距离</label><input id="clipRadius" type="number" min="20" max="150" step="0.5" value="70"><input data-pair="clipRadius" type="range" min="20" max="150" step="0.5" value="70"></div>
           <div class="control"><label for="clipCount">候选卡扣组数</label><input id="clipCount" type="number" min="3" max="12" step="1" value="5"><input data-pair="clipCount" type="range" min="3" max="12" step="1" value="5"></div>
@@ -659,7 +659,7 @@
       buildTrialClipGeometry,
       buildSocketTrialGeometry,
       trialBaseRadius
-    } from "./轮毂盖几何.js?v=detachable-7";
+    } from "./轮毂盖几何.js?v=detachable-11";
 
     const $ = (selector) => document.querySelector(selector);
     const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -895,7 +895,7 @@
       // 老配置没有连接方式时始终回到原一体结构，不继承上一次的可拆选择。
       $('input[name="attachmentMode"][value="integrated"]').checked = true;
       restoreSavedValue("mountClearance", config.values.mountClearance ?? .15);
-      restoreSavedValue("mountRibHeight", config.values.mountRibHeight ?? .35);
+      restoreSavedValue("mountRibHeight", config.values.mountRibHeight ?? .4);
       Object.entries(config.radios || {}).forEach(([name, value]) => {
         const input = $(`input[name="${name}"][value="${value}"]`);
         if (input) input.checked = true;
@@ -1074,16 +1074,16 @@
       if (detachable) {
         controls.mountDepth.textContent = `${p.mount.rootOffset.toFixed(2)} mm`;
         controls.ribInterference.textContent = `${p.mount.ribInterference.toFixed(2)} mm`;
-        controls.mountDimensions.textContent = `底座=爪底 ${p.contactLength.toFixed(1)} · 爪顶 ${p.topWidth.toFixed(1)} · 根/端厚 ${p.clawRootThickness.toFixed(1)}/${p.clawTipThickness.toFixed(1)} · 摩擦隙 ${p.mount.clearance.toFixed(2)} · 入口棱 ${p.mount.ribHeight.toFixed(2)}`;
+        controls.mountDimensions.textContent = `底座=爪底 ${p.contactLength.toFixed(1)} · 爪顶 ${p.topWidth.toFixed(1)} · 桥厚 ${p.mount.bridgeThickness.toFixed(1)} · 根/端厚 ${p.clawRootThickness.toFixed(1)}/${p.clawTipThickness.toFixed(1)} · 刚性根段 ${p.rootRigidLength.toFixed(1)} · 根圆角 R${p.rootFilletRadius.toFixed(1)} · 摩擦隙 ${p.mount.clearance.toFixed(2)} · 横棱 ${p.mount.ribHeight.toFixed(2)} × ${p.mount.ribSpan.toFixed(1)} · 入/退坡 ${p.mount.ribInsertionAngle.toFixed(0)}°/${p.mount.ribRemovalAngle.toFixed(0)}° · 尾端隙 ${p.mount.ribTailClearance.toFixed(2)}`;
       }
       controls.canvasHint.textContent = detachable
-        ? p.mode === "color" ? "盖板保留分色 / 橙色：可更换卡扣 / 半透明：参考轮辐（不导出）" : "青绿：盖板与刚性固定座 / 橙色：可更换卡扣 / 半透明：参考轮辐（不导出）"
+        ? p.mode === "color" ? "盖板保留分色 / 橙色：可更换卡扣 / 黄色细线：滑块到位尾端 / 半透明：参考轮辐（不导出）" : "青绿：盖板与刚性固定座 / 橙色：可更换卡扣 / 黄色细线：滑块到位尾端 / 半透明：参考轮辐（不导出）"
         : p.mode === "color" ? "彩色：齐平嵌色顶层 / 青色：参考轮辐边缘（不导出）" : "橙色：轮毂盖与向外双爪 / 青色：参考开口左右边缘（不导出）";
       controls.activeClipCount.textContent = `${m.enabled} / ${p.clipCount} 组`;
       controls.jawOpening.textContent = `${m.jawOuterSpan.toFixed(2)} mm`;
-      controls.clipStrain.textContent = `${p.estimatedStrain.toFixed(2)}%`;
+      controls.clipStrain.textContent = Number.isFinite(p.estimatedStrain) ? `${p.estimatedStrain.toFixed(2)}%` : "无法计算";
       const skirtText = p.skirtHeight > 0 ? `裙边 ${p.skirtHeight.toFixed(1)} × ${p.skirtThickness.toFixed(1)}` : "无裙边";
-      const clawShapeText = detachable ? `底/顶面宽 ${p.contactLength.toFixed(1)}/${p.topWidth.toFixed(1)} · 根/端厚 ${p.clawRootThickness.toFixed(1)}/${p.clawTipThickness.toFixed(1)}` : `爪根/末 ${p.legThickness.toFixed(1)}/${p.tipThickness.toFixed(1)}`;
+      const clawShapeText = detachable ? `底/顶面宽 ${p.contactLength.toFixed(1)}/${p.topWidth.toFixed(1)} · 桥厚 ${p.mount.bridgeThickness.toFixed(1)} · 根/端厚 ${p.clawRootThickness.toFixed(1)}/${p.clawTipThickness.toFixed(1)} · 根段 ${p.rootRigidLength.toFixed(1)} · 根圆角 R${p.rootFilletRadius.toFixed(1)}` : `爪根/末 ${p.legThickness.toFixed(1)}/${p.tipThickness.toFixed(1)}`;
       controls.autoDimensions.textContent = `板 ${p.coverThickness.toFixed(1)} · ${skirtText} · 圈 ${p.outerRingWidth.toFixed(1)} · ${clawShapeText} · 外勾 ${p.hookReach.toFixed(2)} · 钩高 ${p.hookHeight.toFixed(2)} · 坡度 ${p.insertionAngle.toFixed(0)}°`;
       controls.edgeMeasure.textContent = p.mode === "color" ? `齐平嵌色层 ${p.colorLayerHeight.toFixed(1)} mm` : `外圈保留 ${p.outerRingWidth.toFixed(1)} mm`;
       controls.metricDiameter.textContent = `${p.coverDiameter.toFixed(1)} mm`;
@@ -2201,7 +2201,7 @@
       const strengthName = { easy:"容易拆装", balanced:"均衡", reinforced:"加强且可拆" }[p.strengthPreset];
       const fitName = { tight:"偏紧", standard:"标准", loose:"偏松" }[p.fitPreset];
       const coverDimensions = `盖板厚度 ${p.coverThickness.toFixed(1)} mm；外圈裙边 ${p.skirtHeight > 0 ? `${p.skirtHeight.toFixed(1)} mm 高 × ${p.skirtThickness.toFixed(1)} mm 厚` : "未生成"}`;
-      const clipDimensions = `开口宽度 ${p.openingWidth} mm；爪片底/顶面宽度 ${p.contactLength}/${p.topWidth} mm；${p.mount ? `自动根/端厚度 ${p.clawRootThickness}/${p.clawTipThickness} mm；滑块摩擦间隙 ${p.mount.clearance} mm；入口防退棱 ${p.mount.ribHeight} mm；` : `自动爪片厚度 ${p.legThickness} mm；`}边缘间隙 ${p.sideClearance} mm；单侧外勾 ${p.hookReach} mm；自动倒钩轴向高度 ${p.hookHeight} mm；导入坡度 ${p.insertionAngle.toFixed(1)}°`;
+      const clipDimensions = `开口宽度 ${p.openingWidth} mm；爪片底/顶面宽度 ${p.contactLength}/${p.topWidth} mm；${p.mount ? `承力桥厚度 ${p.mount.bridgeThickness} mm；自动根/端厚度 ${p.clawRootThickness}/${p.clawTipThickness} mm；刚性根段 ${p.rootRigidLength.toFixed(2)} mm；弹性渐缩段 ${p.flexibleLength.toFixed(2)} mm；根部圆角 R${p.rootFilletRadius} mm；滑块摩擦间隙 ${p.mount.clearance} mm；入口横向防退棱 ${p.mount.ribHeight} × ${p.mount.ribSpan} mm；入/退坡 ${p.mount.ribInsertionAngle.toFixed(1)}°/${p.mount.ribRemovalAngle.toFixed(1)}°；滑块尾端间隙 ${p.mount.ribTailClearance.toFixed(2)} mm；` : `自动爪片厚度 ${p.legThickness} mm；`}边缘间隙 ${p.sideClearance} mm；单侧外勾 ${p.hookReach} mm；自动倒钩轴向高度 ${p.hookHeight} mm；导入坡度 ${p.insertionAngle.toFixed(1)}°`;
       const patternSettings = p.mode === "color"
         ? `${p.colorStyle === "outline" ? `双色描线；来源 ${selectedPreset("outlineSource")}；线宽 ${numberValue(controls.outlineWidth).toFixed(1)} mm；灵敏度 ${numberValue(controls.edgeSensitivity)}；断线连接 ${numberValue(controls.outlineClose)}；杂线清理 ${numberValue(controls.outlineCleanup)}；平滑 ${numberValue(controls.outlineSmoothing)}` : `图片自动分色；目标 ${numberValue(controls.colorCount)} 色；最小色块 ${numberValue(controls.minColorFeature).toFixed(1)} mm`}；色板 ${p.colorPalette.join(" / ")}；背景底色 ${p.colorPalette[0]}；嵌色层 ${p.colorLayerHeight.toFixed(1)} mm；比例 ${(p.patternScale * 100).toFixed(0)}%；位置 X ${p.patternOffsetX.toFixed(1)} / Y ${p.patternOffsetY.toFixed(1)} mm；旋转 ${p.patternRotation.toFixed(0)}°；手工上色 ${state.patternEdits.length} 项`
         : `比例 ${(p.patternScale * 100).toFixed(0)}%；位置 X ${p.patternOffsetX.toFixed(1)} / Y ${p.patternOffsetY.toFixed(1)} mm；旋转 ${p.patternRotation.toFixed(0)}°；采样 ${p.samplingResolution}px；轮廓平滑 ${p.patternSmoothing}；杂点清理 ${p.cleanup}；镂空闭合 ${p.closeStrength}；最小镂空 ${p.minHoleArea} mm²；镂空扩张 ${p.hollowExpansion} mm；手工编辑 ${state.patternEdits.length} 项；阈值 ${numberValue(controls.threshold)}；反色 ${controls.invertPattern.checked ? "开启" : "关闭"}`;
@@ -2244,7 +2244,7 @@
           build += `<item objectid="${id}" transform="${translationTransform(x,(index-(enabled-1)/2)*pitch,0)}"/>`;
           modelSettings += `<object id="${id}"><metadata key="name" value="${escapeXml(part.name)}"/>${threeMfPartSettings(id, part.name, 0)}</object>`;
         });
-        mountingMetadata = `<metadata name="DetachableMount">${escapeXml(JSON.stringify(p.mount))}</metadata><metadata name="MechanicalPartChecks">${escapeXml(JSON.stringify(state.clipParts.map((part) => ({ name:part.name, ...part.verification }))))}</metadata><metadata name="PrintingLayout">盖板与卡扣为独立打印对象；卡扣已侧放。按打印平台大小重新排版；不要合并。滑块依靠配合摩擦与固定座入口单侧小棱防退，先拆下整盖再反向拉出更换卡扣。</metadata>`;
+        mountingMetadata = `<metadata name="DetachableMount">${escapeXml(JSON.stringify(p.mount))}</metadata><metadata name="MechanicalPartChecks">${escapeXml(JSON.stringify(state.clipParts.map((part) => ({ name:part.name, ...part.verification }))))}</metadata><metadata name="PrintingLayout">盖板与卡扣为独立打印对象；卡扣已侧放。按打印平台大小重新排版；不要合并。滑块依靠配合摩擦与固定座滑槽底面入口横棱防退，先拆下整盖再反向拉出更换卡扣。</metadata>`;
       }
       const model = `<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="zh-CN" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"${p.mode === "color" ? ' xmlns:m="http://schemas.microsoft.com/3dmanufacturing/material/2015/02"' : ""}><metadata name="Title">婴儿车装饰轮毂盖 ${p.coverDiameter}mm</metadata><metadata name="Application">婴儿车轮毂盖生成器</metadata><metadata name="Description">非承力装饰件；${enabled} 组同开口向外双爪；${modeName}</metadata><metadata name="AttachmentMode">${p.attachmentMode}</metadata>${mountingMetadata}<metadata name="CoverDimensions">${escapeXml(coverDimensions)}</metadata><metadata name="StrengthPreset">${strengthName}</metadata><metadata name="FitPreset">${fitName}</metadata><metadata name="ClipSettings">${state.customClipSettings ? "自定义" : "跟随预设"}</metadata><metadata name="ClipDimensions">${escapeXml(clipDimensions)}</metadata><metadata name="PatternSettings">${escapeXml(patternSettings)}</metadata><metadata name="EstimatedStrain">${p.estimatedStrain.toFixed(2)}%</metadata><metadata name="GeometryKernel">Manifold 3.5.1</metadata><metadata name="GeometryCheck">${geometryCheck}</metadata>${p.mode === "color" ? `<metadata name="MaterialPartChecks">${escapeXml(materialPartChecks)}</metadata>` : ""}<resources>${resources}</resources><build>${build}</build></model>`;
       const types = `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/><Default Extension="config" ContentType="application/xml"/></Types>`;
@@ -2533,7 +2533,7 @@
       try {
         const sample = await buildSocketTrialGeometry(p);
         download(trianglesToBinaryStl(sample.triangles), `可拆卡扣试装座-开口${p.openingWidth}mm-摩擦间隙${p.mount.clearance}mm-防退棱${p.mount.ribHeight}mm.stl`, "application/octet-stream");
-        showToast("试装座已导出；与单只卡扣配对检查滑入力、防退力和反向拆卸力");
+        showToast("试装座已导出；横向防退棱位于滑槽底面入口，请配对检查滑入力和反向拆卸力");
       } catch (error) { showToast(`试装座生成失败：${error instanceof Error ? error.message : String(error)}`); }
       finally { controls.downloadSocketStl.disabled = !validateTrialClip(params()).valid; }
     });
