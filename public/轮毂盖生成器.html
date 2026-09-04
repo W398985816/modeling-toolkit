@@ -540,7 +540,7 @@
                   <label><input type="radio" name="outlineSource" value="edge"><span>照片边缘</span></label>
                 </div>
               </div>
-              <div class="control"><label for="outlineWidth">描线宽度</label><input id="outlineWidth" type="number" min="0.8" max="3" step="0.1" value="1.2"><input data-pair="outlineWidth" type="range" min="0.8" max="3" step="0.1" value="1.2"></div>
+              <div class="control"><label for="outlineWidth">描线宽度</label><input id="outlineWidth" type="number" min="0.2" max="3" step="0.05" value="1.2"><input data-pair="outlineWidth" type="range" min="0.2" max="3" step="0.05" value="1.2"><p class="control-note">最细 0.2 mm；低于 0.4 mm 时会自动提高采样精度，但 0.4 mm 喷嘴切片时可能忽略过细区域，建议先打印小样。</p></div>
               <div class="control"><label for="edgeSensitivity">边缘灵敏度</label><input id="edgeSensitivity" type="number" min="20" max="90" step="1" value="55"><input data-pair="edgeSensitivity" type="range" min="20" max="90" step="1" value="55"></div>
               <div class="control"><label for="outlineClose">断线连接</label><input id="outlineClose" type="number" min="0" max="6" step="1" value="2"><input data-pair="outlineClose" type="range" min="0" max="6" step="1" value="2"></div>
               <div class="control"><label for="outlineCleanup">杂线清理</label><input id="outlineCleanup" type="number" min="0" max="8" step="1" value="2"><input data-pair="outlineCleanup" type="range" min="0" max="8" step="1" value="2"></div>
@@ -588,7 +588,7 @@
             </div>
           </div>
           <div class="control"><label for="patternRotation">图案旋转</label><input id="patternRotation" type="number" min="-180" max="180" step="1" value="0"><input data-pair="patternRotation" type="range" min="-180" max="180" step="1" value="0"><p class="control-note">围绕图案自身中心旋转，可配合移动和缩放避开背面的卡爪根部。</p></div>
-          <div class="control"><label for="patternScale">图案比例</label><input id="patternScale" type="number" min="30" max="100" step="1" value="100"><input data-pair="patternScale" type="range" min="30" max="100" step="1" value="100"><p class="control-note" id="patternScaleNote">相对于外圈以内可用图案区域的占比；围绕当前图案中心缩放，不影响外圈和卡爪根部保护区。</p></div>
+          <div class="control"><label for="patternScale">图案比例</label><input id="patternScale" type="number" min="10" max="200" step="1" value="100"><input data-pair="patternScale" type="range" min="10" max="200" step="1" value="100"><p class="control-note" id="patternScaleNote">相对于外圈以内可用图案区域的占比；围绕当前图案中心缩放，不影响外圈和卡爪根部保护区。</p></div>
           <details class="section binary-only" id="binaryAdjustments" style="margin:0">
             <summary>图案微调</summary>
             <div class="section-body">
@@ -659,7 +659,7 @@
       buildTrialClipGeometry,
       buildSocketTrialGeometry,
       trialBaseRadius
-    } from "./轮毂盖几何.js?v=detachable-11";
+    } from "./轮毂盖几何.js?v=detachable-12";
 
     const $ = (selector) => document.querySelector(selector);
     const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -762,7 +762,7 @@
     function currentMode() { return $("input[name='patternMode']:checked").value; }
     function selectedPreset(name) { return $(`input[name='${name}']:checked`).value; }
     function currentColorStyle() { return selectedPreset("colorStyle"); }
-    function currentPatternScale() { return Math.max(.3, Math.min(1, numberValue(controls.patternScale) / 100)); }
+    function currentPatternScale() { return Math.max(.1, Math.min(2, numberValue(controls.patternScale) / 100)); }
     function currentPatternSmoothing() { return Math.max(0, Math.min(8, Math.round(numberValue(controls.smoothing)))); }
 
     function readConfigStore() {
@@ -1332,6 +1332,51 @@
       return labels;
     }
 
+    function thinOutlineMask(mask, width, height) {
+      const output = mask.slice();
+      const candidates = [];
+      for (let y = 1; y < height - 1; y += 1) for (let x = 1; x < width - 1; x += 1) {
+        const index = y * width + x;
+        if (output[index]) candidates.push(index);
+      }
+      let changed = true;
+      for (let iteration = 0; changed && iteration < 96; iteration += 1) {
+        changed = false;
+        for (let pass = 0; pass < 2; pass += 1) {
+          const removed = [];
+          candidates.forEach((index) => {
+            if (!output[index]) return;
+            const north = output[index - width], northEast = output[index - width + 1];
+            const east = output[index + 1], southEast = output[index + width + 1];
+            const south = output[index + width], southWest = output[index + width - 1];
+            const west = output[index - 1], northWest = output[index - width - 1];
+            const neighbours = north + northEast + east + southEast + south + southWest + west + northWest;
+            if (neighbours < 2 || neighbours > 6) return;
+            const ring = [north, northEast, east, southEast, south, southWest, west, northWest, north];
+            let transitions = 0;
+            for (let ringIndex = 0; ringIndex < 8; ringIndex += 1) if (!ring[ringIndex] && ring[ringIndex + 1]) transitions += 1;
+            if (transitions !== 1) return;
+            if (pass === 0 && north && east && south) return;
+            if (pass === 0 && east && south && west) return;
+            if (pass === 1 && north && east && west) return;
+            if (pass === 1 && north && south && west) return;
+            removed.push(index);
+          });
+          if (removed.length) {
+            changed = true;
+            removed.forEach((index) => { output[index] = 0; });
+          }
+        }
+      }
+      const connected = output.slice();
+      for (let y = 0; y < height - 1; y += 1) for (let x = 0; x < width - 1; x += 1) {
+        const index = y * width + x;
+        if (output[index] && output[index + width + 1] && !output[index + 1] && !output[index + width]) connected[index + 1] = 1;
+        if (output[index + 1] && output[index + width] && !output[index] && !output[index + width + 1]) connected[index] = 1;
+      }
+      return connected;
+    }
+
     function detectOutlineMask(pixels, size) {
       let luminance = new Float32Array(size * size);
       let light = 0, dark = 0, opaque = 0;
@@ -1380,8 +1425,10 @@
       if (cleanup) mask = removeSmallPatternComponents(mask, size, size, Math.max(2, Math.round((cleanup + 1) ** 2)));
       const smoothing = numberValue(controls.outlineSmoothing);
       if (smoothing) mask = smoothMask(mask, size, size, smoothing);
+      mask = thinOutlineMask(mask, size, size);
       const pixelSize = numberValue(controls.coverDiameter) / size;
-      const radius = Math.max(0, Math.round(numberValue(controls.outlineWidth) / pixelSize / 2));
+      const targetPixels = numberValue(controls.outlineWidth) / pixelSize;
+      const radius = Math.max(0, Math.round((targetPixels - 1) / 2));
       if (radius) mask = dilate(mask, size, size, radius);
       return { mask, source };
     }
@@ -1596,10 +1643,15 @@
 
     function processImage() {
       const requestedValue = numberValue(controls.samplingResolution);
-      const requestedSize = Number.isFinite(requestedValue)
+      const baseSize = Number.isFinite(requestedValue)
         ? Math.max(256, Math.min(1024, Math.round(requestedValue / 128) * 128))
         : 512;
-      controls.samplingResolution.value = requestedSize;
+      const outlineWidth = Math.max(.2, numberValue(controls.outlineWidth));
+      const fineOutlineSize = Math.ceil(numberValue(controls.coverDiameter) / outlineWidth / 128) * 128;
+      const requestedSize = currentMode() === "color" && currentColorStyle() === "outline"
+        ? Math.max(baseSize, Math.min(2048, fineOutlineSize))
+        : baseSize;
+      controls.samplingResolution.value = baseSize;
       const canvas = controls.patternCanvas;
       if (canvas.width !== requestedSize) canvas.width = canvas.height = requestedSize;
       if (currentMode() === "color") {
@@ -2203,7 +2255,7 @@
       const coverDimensions = `盖板厚度 ${p.coverThickness.toFixed(1)} mm；外圈裙边 ${p.skirtHeight > 0 ? `${p.skirtHeight.toFixed(1)} mm 高 × ${p.skirtThickness.toFixed(1)} mm 厚` : "未生成"}`;
       const clipDimensions = `开口宽度 ${p.openingWidth} mm；爪片底/顶面宽度 ${p.contactLength}/${p.topWidth} mm；${p.mount ? `承力桥厚度 ${p.mount.bridgeThickness} mm；自动根/端厚度 ${p.clawRootThickness}/${p.clawTipThickness} mm；刚性根段 ${p.rootRigidLength.toFixed(2)} mm；弹性渐缩段 ${p.flexibleLength.toFixed(2)} mm；根部圆角 R${p.rootFilletRadius} mm；滑块摩擦间隙 ${p.mount.clearance} mm；入口横向防退棱 ${p.mount.ribHeight} × ${p.mount.ribSpan} mm；入/退坡 ${p.mount.ribInsertionAngle.toFixed(1)}°/${p.mount.ribRemovalAngle.toFixed(1)}°；滑块尾端间隙 ${p.mount.ribTailClearance.toFixed(2)} mm；` : `自动爪片厚度 ${p.legThickness} mm；`}边缘间隙 ${p.sideClearance} mm；单侧外勾 ${p.hookReach} mm；自动倒钩轴向高度 ${p.hookHeight} mm；导入坡度 ${p.insertionAngle.toFixed(1)}°`;
       const patternSettings = p.mode === "color"
-        ? `${p.colorStyle === "outline" ? `双色描线；来源 ${selectedPreset("outlineSource")}；线宽 ${numberValue(controls.outlineWidth).toFixed(1)} mm；灵敏度 ${numberValue(controls.edgeSensitivity)}；断线连接 ${numberValue(controls.outlineClose)}；杂线清理 ${numberValue(controls.outlineCleanup)}；平滑 ${numberValue(controls.outlineSmoothing)}` : `图片自动分色；目标 ${numberValue(controls.colorCount)} 色；最小色块 ${numberValue(controls.minColorFeature).toFixed(1)} mm`}；色板 ${p.colorPalette.join(" / ")}；背景底色 ${p.colorPalette[0]}；嵌色层 ${p.colorLayerHeight.toFixed(1)} mm；比例 ${(p.patternScale * 100).toFixed(0)}%；位置 X ${p.patternOffsetX.toFixed(1)} / Y ${p.patternOffsetY.toFixed(1)} mm；旋转 ${p.patternRotation.toFixed(0)}°；手工上色 ${state.patternEdits.length} 项`
+        ? `${p.colorStyle === "outline" ? `双色描线；来源 ${selectedPreset("outlineSource")}；线宽 ${numberValue(controls.outlineWidth).toFixed(2)} mm；灵敏度 ${numberValue(controls.edgeSensitivity)}；断线连接 ${numberValue(controls.outlineClose)}；杂线清理 ${numberValue(controls.outlineCleanup)}；平滑 ${numberValue(controls.outlineSmoothing)}` : `图片自动分色；目标 ${numberValue(controls.colorCount)} 色；最小色块 ${numberValue(controls.minColorFeature).toFixed(1)} mm`}；色板 ${p.colorPalette.join(" / ")}；背景底色 ${p.colorPalette[0]}；嵌色层 ${p.colorLayerHeight.toFixed(1)} mm；比例 ${(p.patternScale * 100).toFixed(0)}%；位置 X ${p.patternOffsetX.toFixed(1)} / Y ${p.patternOffsetY.toFixed(1)} mm；旋转 ${p.patternRotation.toFixed(0)}°；手工上色 ${state.patternEdits.length} 项`
         : `比例 ${(p.patternScale * 100).toFixed(0)}%；位置 X ${p.patternOffsetX.toFixed(1)} / Y ${p.patternOffsetY.toFixed(1)} mm；旋转 ${p.patternRotation.toFixed(0)}°；采样 ${p.samplingResolution}px；轮廓平滑 ${p.patternSmoothing}；杂点清理 ${p.cleanup}；镂空闭合 ${p.closeStrength}；最小镂空 ${p.minHoleArea} mm²；镂空扩张 ${p.hollowExpansion} mm；手工编辑 ${state.patternEdits.length} 项；阈值 ${numberValue(controls.threshold)}；反色 ${controls.invertPattern.checked ? "开启" : "关闭"}`;
       const geometryCheck = state.geometryVerification ? `${state.geometryVerification.status}; components=${state.geometryVerification.componentCount}; invalidEdges=${state.geometryVerification.invalidEdges}` : "Unavailable";
       const materialPartChecks = state.materialParts.map((part, index) => `${index + 1}:${part.verification.status},components=${part.verification.componentCount},invalidEdges=${part.verification.invalidEdges}`).join("; ");

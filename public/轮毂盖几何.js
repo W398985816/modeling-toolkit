@@ -679,7 +679,7 @@ function vectorPattern(wasm, p, mask) {
     pattern = raw.simplify(Math.max(.04, patternRadius / 2400));
     raw.delete();
   }
-  const scale = clamp(p.patternScale ?? 1, .3, 1);
+  const scale = clamp(p.patternScale ?? 1, .1, 2);
   const scaled = pattern.scale(scale);
   pattern.delete();
   const smoothing = mask ? clamp(Math.round(p.patternSmoothing ?? 0), 0, 8) : 0;
