@@ -540,11 +540,15 @@
                   <label><input type="radio" name="outlineSource" value="edge"><span>照片边缘</span></label>
                 </div>
               </div>
-              <div class="control"><label for="outlineWidth">描线宽度</label><input id="outlineWidth" type="number" min="0.2" max="3" step="0.05" value="1.2"><input data-pair="outlineWidth" type="range" min="0.2" max="3" step="0.05" value="1.2"><p class="control-note">最细 0.2 mm；低于 0.4 mm 时会自动提高采样精度，但 0.4 mm 喷嘴切片时可能忽略过细区域，建议先打印小样。</p></div>
+              <div class="control" id="outlineWeightControl"><label for="outlineWeight">线稿粗细（%）</label><input id="outlineWeight" type="number" min="25" max="200" step="5" value="100"><input data-pair="outlineWeight" type="range" min="25" max="200" step="5" value="100"><p class="control-note">100% 保留原线；向左收细，向右加粗。收细时保护约 0.4 mm 的笔画及更细的原始细节，同时保留端点和小闭环；局部粗细不一定同比变化。</p></div>
+              <div class="control" id="outlineWidthControl" hidden><label for="outlineWidth">照片描线宽度（mm）</label><input id="outlineWidth" type="number" min="0.2" max="3" step="0.1" value="0.6"><input data-pair="outlineWidth" type="range" min="0.2" max="3" step="0.1" value="0.6"><p class="control-note">边缘位置固定，只调整线宽。低于 0.4 mm 的线条可能被 0.4 mm 喷嘴切片忽略。</p></div>
+              <details class="section" style="margin:0"><summary>描线微调</summary><div class="section-body">
               <div class="control"><label for="edgeSensitivity">边缘灵敏度</label><input id="edgeSensitivity" type="number" min="20" max="90" step="1" value="55"><input data-pair="edgeSensitivity" type="range" min="20" max="90" step="1" value="55"></div>
-              <div class="control"><label for="outlineClose">断线连接</label><input id="outlineClose" type="number" min="0" max="6" step="1" value="2"><input data-pair="outlineClose" type="range" min="0" max="6" step="1" value="2"></div>
-              <div class="control"><label for="outlineCleanup">杂线清理</label><input id="outlineCleanup" type="number" min="0" max="8" step="1" value="2"><input data-pair="outlineCleanup" type="range" min="0" max="8" step="1" value="2"></div>
-              <div class="control"><label for="outlineSmoothing">描线平滑</label><input id="outlineSmoothing" type="number" min="0" max="4" step="1" value="1"><input data-pair="outlineSmoothing" type="range" min="0" max="4" step="1" value="1"></div>
+              <div class="control"><label for="outlineClose">断线连接</label><input id="outlineClose" type="number" min="0" max="6" step="1" value="0"><input data-pair="outlineClose" type="range" min="0" max="6" step="1" value="0"></div>
+              <div class="control"><label for="outlineCleanup">杂线清理</label><input id="outlineCleanup" type="number" min="0" max="8" step="1" value="0"><input data-pair="outlineCleanup" type="range" min="0" max="8" step="1" value="0"></div>
+              <div class="control"><label for="outlineSmoothing">描线平滑</label><input id="outlineSmoothing" type="number" min="0" max="4" step="1" value="0"><input data-pair="outlineSmoothing" type="range" min="0" max="4" step="1" value="0"></div>
+              <p class="control-note">默认保留小细节。提高连接、清理或平滑会改变原图；需要去掉扫描噪点时再调整。</p>
+              </div></details>
               <p class="paint-note">PETG 上色前建议轻度打磨或使用塑料底漆，并先做小面积附着测试。</p>
             </div>
             <p class="control-note">3MF 保存模型、分色和零件，不包含打印机配置。Bambu Studio 若提示“配置无效，仅加载几何数据”，继续后请在颜色匹配窗口确认耗材；不要把分色零件拆成独立对象。</p>
@@ -659,7 +663,8 @@
       buildTrialClipGeometry,
       buildSocketTrialGeometry,
       trialBaseRadius
-    } from "./轮毂盖几何.js?v=detachable-12";
+    } from "./轮毂盖几何.js?v=outline-13";
+    import { detectOutline, adjustOutlineWeight, outlineDistance, traceOutlineContours } from "./轮毂盖描线.js?v=1";
 
     const $ = (selector) => document.querySelector(selector);
     const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -673,7 +678,7 @@
       "mountClearance", "mountRibHeight",
       "patternScale", "threshold", "samplingResolution", "cleanup", "closeStrength",
       "minHoleArea", "hollowExpansion", "smoothing", "reliefHeight", "brushSize",
-      "colorLayerHeight", "colorCount", "minColorFeature", "outlineWidth",
+      "colorLayerHeight", "colorCount", "minColorFeature", "outlineWidth", "outlineWeight",
       "edgeSensitivity", "outlineClose", "outlineCleanup", "outlineSmoothing"
     ];
     const controls = {
@@ -688,7 +693,7 @@
       patternRotation: $("#patternRotation"), patternScale: $("#patternScale"), threshold: $("#threshold"), samplingResolution: $("#samplingResolution"), cleanup: $("#cleanup"), closeStrength: $("#closeStrength"), minHoleArea: $("#minHoleArea"), hollowExpansion: $("#hollowExpansion"), smoothing: $("#smoothing"), invertPattern: $("#invertPattern"), reliefHeight: $("#reliefHeight"),
       colorSettings: $("#colorSettings"), paletteSettings: $("#paletteSettings"), outlineSettings: $("#outlineSettings"), baseColor: $("#baseColor"), colorLayerHeight: $("#colorLayerHeight"), colorCount: $("#colorCount"), minColorFeature: $("#minColorFeature"), paletteGrid: $("#paletteGrid"),
       reextractColors: $("#reextractColors"),
-      outlineWidth: $("#outlineWidth"), edgeSensitivity: $("#edgeSensitivity"), outlineClose: $("#outlineClose"), outlineCleanup: $("#outlineCleanup"), outlineSmoothing: $("#outlineSmoothing"), binaryAdjustments: $("#binaryAdjustments"),
+      outlineWidth: $("#outlineWidth"), outlineWeight: $("#outlineWeight"), outlineWeightControl: $("#outlineWeightControl"), outlineWidthControl: $("#outlineWidthControl"), edgeSensitivity: $("#edgeSensitivity"), outlineClose: $("#outlineClose"), outlineCleanup: $("#outlineCleanup"), outlineSmoothing: $("#outlineSmoothing"), binaryAdjustments: $("#binaryAdjustments"),
       imageInput: $("#imageInput"), uploadZone: $("#uploadZone"), uploadTitle: $("#uploadTitle"), uploadName: $("#uploadName"), patternCanvas: $("#patternCanvas"),
       patternCanvasWrap: $("#patternCanvasWrap"), patternEditor: $("#patternEditor"), patternStatus: $("#patternStatus"), reliefControl: $("#reliefControl"), previewCanvas: $("#previewCanvas"),
       patternEditTabLabel: $("#patternEditTabLabel"), patternLegend: $("#patternLegend"), patternTools: $("#patternTools"), patternScaleNote: $("#patternScaleNote"), canvasHint: $("#canvasHint"),
@@ -710,6 +715,10 @@
       mask: null,
       colorBaseMask: null,
       colorMask: null,
+      outlineCache: null,
+      outlineSourceCache: null,
+      outlineField: null,
+      outlineLevel: .5,
       colorPalette: ["#f4f0e7", "#20221f", "#e65f34", "#2e7771"],
       activeColorIndex: 1,
       paletteUserEdited: false,
@@ -869,6 +878,9 @@
       state.mask = null;
       state.colorBaseMask = null;
       state.colorMask = null;
+      state.outlineCache = null;
+      state.outlineSourceCache = null;
+      state.outlineField = null;
       state.solidIslands = [];
       state.exteriorSolid = null;
       state.selectedIsland = 0;
@@ -892,6 +904,7 @@
       const config = selectedSavedConfig();
       if (!config) return showToast("当前浏览器没有已保存参数");
       savedControlIds.forEach((id) => restoreSavedValue(id, config.values[id]));
+      restoreSavedValue("outlineWeight", config.values.outlineWeight ?? 100);
       // 老配置没有连接方式时始终回到原一体结构，不继承上一次的可拆选择。
       $('input[name="attachmentMode"][value="integrated"]').checked = true;
       restoreSavedValue("mountClearance", config.values.mountClearance ?? .15);
@@ -1252,8 +1265,11 @@
       const ctx = transformed.getContext("2d", { willReadFrequently:true });
       ctx.translate(size / 2 + state.patternOffsetX / patternAvailableSize() * size, size / 2 - state.patternOffsetY / patternAvailableSize() * size);
       ctx.rotate(-state.patternRotation * Math.PI / 180);
-      const targetSize = size * currentPatternScale();
-      ctx.drawImage(source, -targetSize / 2, -targetSize / 2, targetSize, targetSize);
+      const scale = currentPatternScale();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      // 直接从原图采样，缩放、旋转不再经过一次低分辨率中间图。
+      ctx.drawImage(state.image, -width * scale / 2, -height * scale / 2, width * scale, height * scale);
       return ctx.getImageData(0, 0, size, size);
     }
 
@@ -1332,111 +1348,46 @@
       return labels;
     }
 
-    function thinOutlineMask(mask, width, height) {
-      const output = mask.slice();
-      const candidates = [];
-      for (let y = 1; y < height - 1; y += 1) for (let x = 1; x < width - 1; x += 1) {
-        const index = y * width + x;
-        if (output[index]) candidates.push(index);
-      }
-      let changed = true;
-      for (let iteration = 0; changed && iteration < 96; iteration += 1) {
-        changed = false;
-        for (let pass = 0; pass < 2; pass += 1) {
-          const removed = [];
-          candidates.forEach((index) => {
-            if (!output[index]) return;
-            const north = output[index - width], northEast = output[index - width + 1];
-            const east = output[index + 1], southEast = output[index + width + 1];
-            const south = output[index + width], southWest = output[index + width - 1];
-            const west = output[index - 1], northWest = output[index - width - 1];
-            const neighbours = north + northEast + east + southEast + south + southWest + west + northWest;
-            if (neighbours < 2 || neighbours > 6) return;
-            const ring = [north, northEast, east, southEast, south, southWest, west, northWest, north];
-            let transitions = 0;
-            for (let ringIndex = 0; ringIndex < 8; ringIndex += 1) if (!ring[ringIndex] && ring[ringIndex + 1]) transitions += 1;
-            if (transitions !== 1) return;
-            if (pass === 0 && north && east && south) return;
-            if (pass === 0 && east && south && west) return;
-            if (pass === 1 && north && east && west) return;
-            if (pass === 1 && north && south && west) return;
-            removed.push(index);
-          });
-          if (removed.length) {
-            changed = true;
-            removed.forEach((index) => { output[index] = 0; });
-          }
-        }
-      }
-      const connected = output.slice();
-      for (let y = 0; y < height - 1; y += 1) for (let x = 0; x < width - 1; x += 1) {
-        const index = y * width + x;
-        if (output[index] && output[index + width + 1] && !output[index + 1] && !output[index + width]) connected[index + 1] = 1;
-        if (output[index + 1] && output[index + width] && !output[index] && !output[index + width + 1]) connected[index] = 1;
-      }
-      return connected;
-    }
-
     function detectOutlineMask(pixels, size) {
-      let luminance = new Float32Array(size * size);
-      let light = 0, dark = 0, opaque = 0;
-      for (let index = 0; index < luminance.length; index += 1) {
-        const offset = index * 4;
-        const value = pixels.data[offset] * .2126 + pixels.data[offset + 1] * .7152 + pixels.data[offset + 2] * .0722;
-        luminance[index] = value;
-        if (pixels.data[offset + 3] > 20) { opaque += 1; if (value > 220) light += 1; if (value < 90) dark += 1; }
+      let source = selectedPreset("outlineSource");
+      if (source === "auto") {
+        if (state.outlineSourceCache?.image !== state.image) {
+          const sample = document.createElement("canvas");
+          sample.width = sample.height = 256;
+          const ctx = sample.getContext("2d", { willReadFrequently:true });
+          ctx.drawImage(state.image, 0, 0, 256, 256);
+          state.outlineSourceCache = { image:state.image, source:detectOutline(ctx.getImageData(0, 0, 256, 256), 256, "auto", 55).source };
+        }
+        // 来源只由原图决定，缩放和移动不会把照片误切换成线稿。
+        source = state.outlineSourceCache.source;
       }
-      const requested = selectedPreset("outlineSource");
-      const source = requested === "auto" && opaque ? (light / opaque > .55 && dark / opaque < .38 ? "line" : "edge") : requested;
-      let mask = new Uint8Array(size * size);
-      if (source === "line") {
-        const threshold = 80 + numberValue(controls.edgeSensitivity) * 1.45;
-        for (let index = 0; index < mask.length; index += 1) mask[index] = pixels.data[index * 4 + 3] > 20 && luminance[index] < threshold ? 1 : 0;
-      } else {
-        const blurred = luminance.slice();
-        for (let y = 1; y < size - 1; y += 1) for (let x = 1; x < size - 1; x += 1) {
-          let sum = 0;
-          for (let oy = -1; oy <= 1; oy += 1) for (let ox = -1; ox <= 1; ox += 1) sum += luminance[(y + oy) * size + x + ox];
-          blurred[y * size + x] = sum / 9;
-        }
-        const magnitude = new Float32Array(mask.length);
-        const high = 235 - numberValue(controls.edgeSensitivity) * 2.25, low = high * .45;
-        const weak = new Uint8Array(mask.length), queue = new Int32Array(mask.length);
-        let head = 0, tail = 0;
-        for (let y = 1; y < size - 1; y += 1) for (let x = 1; x < size - 1; x += 1) {
-          const i = y * size + x;
-          const gx = -blurred[i-size-1] - 2*blurred[i-1] - blurred[i+size-1] + blurred[i-size+1] + 2*blurred[i+1] + blurred[i+size+1];
-          const gy = -blurred[i-size-1] - 2*blurred[i-size] - blurred[i-size+1] + blurred[i+size-1] + 2*blurred[i+size] + blurred[i+size+1];
-          magnitude[i] = Math.hypot(gx, gy);
-          if (magnitude[i] >= high) { mask[i] = 1; queue[tail++] = i; }
-          else if (magnitude[i] >= low) weak[i] = 1;
-        }
-        while (head < tail) {
-          const index = queue[head++], x = index % size, y = Math.floor(index / size);
-          for (let oy = -1; oy <= 1; oy += 1) for (let ox = -1; ox <= 1; ox += 1) {
-            const next = (y + oy) * size + x + ox;
-            if (weak[next] && !mask[next]) { mask[next] = 1; queue[tail++] = next; }
-          }
-        }
-      }
-      const closeRadius = Math.ceil(numberValue(controls.outlineClose) / 2);
-      if (closeRadius) mask = closeMask(mask, size, size, closeRadius);
-      const cleanup = numberValue(controls.outlineCleanup);
-      if (cleanup) mask = removeSmallPatternComponents(mask, size, size, Math.max(2, Math.round((cleanup + 1) ** 2)));
+      const sensitivity = numberValue(controls.edgeSensitivity);
       const smoothing = numberValue(controls.outlineSmoothing);
-      if (smoothing) mask = smoothMask(mask, size, size, smoothing);
-      mask = thinOutlineMask(mask, size, size);
-      const pixelSize = numberValue(controls.coverDiameter) / size;
-      const targetPixels = numberValue(controls.outlineWidth) / pixelSize;
-      const radius = Math.max(0, Math.round((targetPixels - 1) / 2));
-      if (radius) mask = dilate(mask, size, size, radius);
-      return { mask, source };
+      const close = numberValue(controls.outlineClose), cleanup = numberValue(controls.outlineCleanup);
+      const key = JSON.stringify([size, source, sensitivity, smoothing, close, cleanup, currentPatternScale(), state.patternOffsetX, state.patternOffsetY, state.patternRotation, numberValue(controls.coverDiameter)]);
+      if (state.outlineCache?.image !== state.image || state.outlineCache?.key !== key) {
+        const detected = detectOutline(pixels, size, source, sensitivity, smoothing);
+        let mask = detected.mask;
+        if (close) mask = closeMask(mask, size, size, Math.ceil(close / 2));
+        if (cleanup) mask = removeSmallPatternComponents(mask, size, size, Math.max(2, Math.round((cleanup + 1) ** 2)), true);
+        state.outlineCache = { image:state.image, key, mask, source:detected.source };
+      }
+      const cached = state.outlineCache;
+      if (cached.source === "line") return { mask:adjustOutlineWeight(cached.mask, size, numberValue(controls.outlineWeight), .4 / (numberValue(controls.coverDiameter) / size)), source:cached.source };
+      if (!cached.distance) cached.distance = outlineDistance(cached.mask, size, 1);
+      const radius = numberValue(controls.outlineWidth) / (numberValue(controls.coverDiameter) / size) / 2;
+      const mask = new Uint8Array(size * size);
+      for (let i = 0; i < mask.length; i += 1) mask[i] = cached.distance[i] <= radius ? 1 : 0;
+      state.outlineField = cached.distance;
+      state.outlineLevel = radius;
+      return { mask, source:cached.source };
     }
 
     function processColorImage() {
       const size = controls.patternCanvas.width;
       let labels = new Uint8Array(size * size);
       let detectedSource = null;
+      state.outlineField = null;
       if (state.image) {
         const pixels = transformedSourcePixels(size);
         if (currentColorStyle() === "outline") {
@@ -1466,11 +1417,14 @@
           state.colorPalette = Array.from({ length:count }, (_, index) => index === 0 ? controls.baseColor.value : state.colorPalette[index] || defaultPrintColors[index]);
         }
       }
+      const lineSource = (detectedSource || selectedPreset("outlineSource")) !== "edge";
+      controls.outlineWeightControl.hidden = !lineSource;
+      controls.outlineWidthControl.hidden = lineSource;
       state.colorBaseMask = labels;
       rebuildEditedMask(true);
       renderPalette();
       const styleText = currentColorStyle() === "outline"
-        ? `双色描线${detectedSource ? ` · ${detectedSource === "line" ? "深色线稿" : "照片边缘"}` : ""}`
+        ? `双色描线${detectedSource ? ` · ${detectedSource === "line" ? `深色线稿 · 粗细 ${numberValue(controls.outlineWeight)}%` : `照片边缘 · 线宽 ${numberValue(controls.outlineWidth).toFixed(1)} mm`}` : ""}`
         : `${state.colorPalette.length} 色自动分色`;
       controls.patternStatus.textContent = `${state.image ? styleText : "纯底色实体盘，可直接手工上色"} · ${patternOffsetText()}。`;
     }
@@ -1596,6 +1550,20 @@
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = "high";
         drawTransformed(state.sourcePreview);
+      } else if (currentMode() === "color" && state.mask?.contours) {
+        ctx.fillStyle = state.colorPalette[0];
+        ctx.fillRect(0, 0, size, size);
+        ctx.save();
+        ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2); ctx.clip();
+        ctx.fillStyle = state.colorPalette[1];
+        ctx.beginPath();
+        state.mask.contours.forEach((polygon) => {
+          ctx.moveTo(...polygon[0]);
+          for (let i = 1; i < polygon.length; i += 1) ctx.lineTo(...polygon[i]);
+          ctx.closePath();
+        });
+        ctx.fill("evenodd");
+        ctx.restore();
       } else if (currentMode() === "color" && mask) {
         const preview = ctx.createImageData(size, size);
         for (let index = 0; index < mask.length; index += 1) {
@@ -1643,17 +1611,16 @@
 
     function processImage() {
       const requestedValue = numberValue(controls.samplingResolution);
-      const baseSize = Number.isFinite(requestedValue)
+      const requestedSize = Number.isFinite(requestedValue)
         ? Math.max(256, Math.min(1024, Math.round(requestedValue / 128) * 128))
         : 512;
-      const outlineWidth = Math.max(.2, numberValue(controls.outlineWidth));
-      const fineOutlineSize = Math.ceil(numberValue(controls.coverDiameter) / outlineWidth / 128) * 128;
-      const requestedSize = currentMode() === "color" && currentColorStyle() === "outline"
-        ? Math.max(baseSize, Math.min(2048, fineOutlineSize))
-        : baseSize;
-      controls.samplingResolution.value = baseSize;
+      controls.samplingResolution.value = requestedSize;
       const canvas = controls.patternCanvas;
-      if (canvas.width !== requestedSize) canvas.width = canvas.height = requestedSize;
+      // 描线以约 0.1 mm 采样，且不随线宽变化，避免调粗细时整幅图重新失真。
+      const sizeForMode = currentMode() === "color" && currentColorStyle() === "outline"
+        ? Math.max(requestedSize, Math.min(2048, Math.max(1024, Math.ceil(numberValue(controls.coverDiameter) / .1 / 128) * 128)))
+        : requestedSize;
+      if (canvas.width !== sizeForMode) canvas.width = canvas.height = sizeForMode;
       if (currentMode() === "color") {
         processColorImage();
         return;
@@ -1790,7 +1757,7 @@
       return source;
     }
 
-    function removeSmallPatternComponents(mask, width, height, minimumArea) {
+    function removeSmallPatternComponents(mask, width, height, minimumArea, diagonal = false) {
       const visited = new Uint8Array(mask.length);
       const output = new Uint8Array(mask.length);
       const queue = new Int32Array(mask.length);
@@ -1802,6 +1769,7 @@
         while (head < tail) {
           const index = queue[head++], x = index % width, y = Math.floor(index / width);
           const neighbours = [x > 0 ? index - 1 : -1, x < width - 1 ? index + 1 : -1, y > 0 ? index - width : -1, y < height - 1 ? index + width : -1];
+          if (diagonal) neighbours.push(x > 0 && y > 0 ? index-width-1 : -1, x < width-1 && y > 0 ? index-width+1 : -1, x > 0 && y < height-1 ? index+width-1 : -1, x < width-1 && y < height-1 ? index+width+1 : -1);
           neighbours.forEach((next) => {
             if (next >= 0 && mask[next] && !visited[next]) { visited[next] = 1; queue[tail++] = next; }
           });
@@ -1927,6 +1895,16 @@
         if (state.patternDraft) applyColorEdit(data, size, state.patternDraft);
         state.colorMask = data;
         state.mask = { data, size };
+        if (currentColorStyle() === "outline") {
+          let field = state.outlineField;
+          if (field && (state.patternEdits.length || state.patternDraft)) {
+            field = field.slice();
+            for (let i = 0; i < data.length; i += 1) {
+              if (data[i] !== state.colorBaseMask[i]) field[i] = data[i] ? 0 : state.outlineLevel + 1;
+            }
+          }
+          state.mask.contours = traceOutlineContours(data, size, field, state.outlineLevel);
+        }
         state.solidIslands = [];
         state.exteriorSolid = null;
         drawPatternPreview(data);
@@ -2248,14 +2226,14 @@
     function buildThreeMf() {
       if (!state.exportMesh) throw new Error("封闭索引网格尚未生成");
       const p = params();
-      if (p.mount && p.mode === "color" && state.multicolorCoordinateWarnings) throw new Error(`多色色块存在 ${state.multicolorCoordinateWarnings} 处坐标闭边歧义，请先提高最小色块宽度`);
+      if ((p.mount || p.colorStyle === "outline") && p.mode === "color" && state.multicolorCoordinateWarnings) throw new Error(`多色色块存在 ${state.multicolorCoordinateWarnings} 处坐标闭边歧义，请先提高最小色块宽度`);
       const enabled = activeClipIndices(p).length;
       const strengthName = { easy:"容易拆装", balanced:"均衡", reinforced:"加强且可拆" }[p.strengthPreset];
       const fitName = { tight:"偏紧", standard:"标准", loose:"偏松" }[p.fitPreset];
       const coverDimensions = `盖板厚度 ${p.coverThickness.toFixed(1)} mm；外圈裙边 ${p.skirtHeight > 0 ? `${p.skirtHeight.toFixed(1)} mm 高 × ${p.skirtThickness.toFixed(1)} mm 厚` : "未生成"}`;
       const clipDimensions = `开口宽度 ${p.openingWidth} mm；爪片底/顶面宽度 ${p.contactLength}/${p.topWidth} mm；${p.mount ? `承力桥厚度 ${p.mount.bridgeThickness} mm；自动根/端厚度 ${p.clawRootThickness}/${p.clawTipThickness} mm；刚性根段 ${p.rootRigidLength.toFixed(2)} mm；弹性渐缩段 ${p.flexibleLength.toFixed(2)} mm；根部圆角 R${p.rootFilletRadius} mm；滑块摩擦间隙 ${p.mount.clearance} mm；入口横向防退棱 ${p.mount.ribHeight} × ${p.mount.ribSpan} mm；入/退坡 ${p.mount.ribInsertionAngle.toFixed(1)}°/${p.mount.ribRemovalAngle.toFixed(1)}°；滑块尾端间隙 ${p.mount.ribTailClearance.toFixed(2)} mm；` : `自动爪片厚度 ${p.legThickness} mm；`}边缘间隙 ${p.sideClearance} mm；单侧外勾 ${p.hookReach} mm；自动倒钩轴向高度 ${p.hookHeight} mm；导入坡度 ${p.insertionAngle.toFixed(1)}°`;
       const patternSettings = p.mode === "color"
-        ? `${p.colorStyle === "outline" ? `双色描线；来源 ${selectedPreset("outlineSource")}；线宽 ${numberValue(controls.outlineWidth).toFixed(2)} mm；灵敏度 ${numberValue(controls.edgeSensitivity)}；断线连接 ${numberValue(controls.outlineClose)}；杂线清理 ${numberValue(controls.outlineCleanup)}；平滑 ${numberValue(controls.outlineSmoothing)}` : `图片自动分色；目标 ${numberValue(controls.colorCount)} 色；最小色块 ${numberValue(controls.minColorFeature).toFixed(1)} mm`}；色板 ${p.colorPalette.join(" / ")}；背景底色 ${p.colorPalette[0]}；嵌色层 ${p.colorLayerHeight.toFixed(1)} mm；比例 ${(p.patternScale * 100).toFixed(0)}%；位置 X ${p.patternOffsetX.toFixed(1)} / Y ${p.patternOffsetY.toFixed(1)} mm；旋转 ${p.patternRotation.toFixed(0)}°；手工上色 ${state.patternEdits.length} 项`
+        ? `${p.colorStyle === "outline" ? `双色描线；来源 ${selectedPreset("outlineSource")}；线稿粗细 ${numberValue(controls.outlineWeight)}%；照片线宽 ${numberValue(controls.outlineWidth).toFixed(1)} mm；灵敏度 ${numberValue(controls.edgeSensitivity)}；断线连接 ${numberValue(controls.outlineClose)}；杂线清理 ${numberValue(controls.outlineCleanup)}；平滑 ${numberValue(controls.outlineSmoothing)}` : `图片自动分色；目标 ${numberValue(controls.colorCount)} 色；最小色块 ${numberValue(controls.minColorFeature).toFixed(1)} mm`}；色板 ${p.colorPalette.join(" / ")}；背景底色 ${p.colorPalette[0]}；嵌色层 ${p.colorLayerHeight.toFixed(1)} mm；比例 ${(p.patternScale * 100).toFixed(0)}%；位置 X ${p.patternOffsetX.toFixed(1)} / Y ${p.patternOffsetY.toFixed(1)} mm；旋转 ${p.patternRotation.toFixed(0)}°；手工上色 ${state.patternEdits.length} 项`
         : `比例 ${(p.patternScale * 100).toFixed(0)}%；位置 X ${p.patternOffsetX.toFixed(1)} / Y ${p.patternOffsetY.toFixed(1)} mm；旋转 ${p.patternRotation.toFixed(0)}°；采样 ${p.samplingResolution}px；轮廓平滑 ${p.patternSmoothing}；杂点清理 ${p.cleanup}；镂空闭合 ${p.closeStrength}；最小镂空 ${p.minHoleArea} mm²；镂空扩张 ${p.hollowExpansion} mm；手工编辑 ${state.patternEdits.length} 项；阈值 ${numberValue(controls.threshold)}；反色 ${controls.invertPattern.checked ? "开启" : "关闭"}`;
       const geometryCheck = state.geometryVerification ? `${state.geometryVerification.status}; components=${state.geometryVerification.componentCount}; invalidEdges=${state.geometryVerification.invalidEdges}` : "Unavailable";
       const materialPartChecks = state.materialParts.map((part, index) => `${index + 1}:${part.verification.status},components=${part.verification.componentCount},invalidEdges=${part.verification.invalidEdges}`).join("; ");
@@ -2268,7 +2246,7 @@
         const materials = p.colorPalette.map((color, index) => `<base name="${escapeXml(index === 0 ? "背景底色" : p.colorStyle === "outline" ? "黑色描线" : `图案颜色 ${index}`)}" displaycolor="${color.toUpperCase()}"/>`).join("");
         // Bambu 读取 Materials 扩展的对象颜色；整块赋色可直接映射耗材，无需逐三角面涂色。
         const colorGroup = `<m:colorgroup id="${colorGroupId}">${p.colorPalette.map((color) => `<m:color color="${color.toUpperCase()}"/>`).join("")}</m:colorgroup>`;
-        const objects = state.materialParts.map((part, index) => `<object id="${index + 2}" type="model" pid="${colorGroupId}" pindex="${part.materialIndex}" name="${escapeXml(part.name)}">${meshXml(part.exportMesh, Boolean(p.mount))}</object>`).join("");
+        const objects = state.materialParts.map((part, index) => `<object id="${index + 2}" type="model" pid="${colorGroupId}" pindex="${part.materialIndex}" name="${escapeXml(part.name)}">${meshXml(part.exportMesh, Boolean(p.mount) || p.colorStyle === "outline")}</object>`).join("");
         const assemblyId = state.materialParts.length + 2;
         const components = state.materialParts.map((_, index) => `<component objectid="${index + 2}"/>`).join("");
         resources = `<basematerials id="1">${materials}</basematerials>${colorGroup}${objects}<object id="${assemblyId}" type="model" name="${escapeXml(`轮毂盖-${modeName}`)}"><components>${components}</components></object>`;
@@ -2319,7 +2297,7 @@
     function showToast(message) { controls.toast.textContent = message; controls.toast.classList.add("show"); clearTimeout(showToast.timer); showToast.timer = setTimeout(() => controls.toast.classList.remove("show"), 2400); }
 
     const imageProcessingPairs = ["coverDiameter", "patternScale", "threshold", "samplingResolution", "cleanup", "closeStrength", "minHoleArea", "hollowExpansion", "smoothing"];
-    const colorProcessingPairs = ["colorCount", "minColorFeature", "outlineWidth", "edgeSensitivity", "outlineClose", "outlineCleanup", "outlineSmoothing"];
+    const colorProcessingPairs = ["colorCount", "minColorFeature", "outlineWidth", "outlineWeight", "edgeSensitivity", "outlineClose", "outlineCleanup", "outlineSmoothing"];
     $$('input[type="range"][data-pair]').forEach((range) => {
       const number = $(`#${range.dataset.pair}`);
       range.addEventListener("input", () => {

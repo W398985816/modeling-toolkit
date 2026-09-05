@@ -883,13 +883,13 @@ function weldSolid(Manifold, solid) {
   return welded;
 }
 
-function materialPartFromSolid(solid, materialIndex, color, name, simplify = true) {
+function materialPartFromSolid(solid, materialIndex, color, name, simplify = true, strictCoordinates = simplify) {
   let canonical;
   if (simplify) canonical = canonicalSolid(solid);
   else canonical = solid;
   let verification;
   try {
-    verification = verifySolid(canonical, simplify);
+    verification = verifySolid(canonical, strictCoordinates);
   } catch (error) {
     canonical.delete();
     throw new Error(`${name}：${error instanceof Error ? error.message : String(error)}`);
@@ -908,14 +908,19 @@ function materialPartFromSolid(solid, materialIndex, color, name, simplify = tru
 
 function makeColorSection(wasm, p, mask, label, outer) {
   const { CrossSection } = wasm;
-  const rectangles = maskRectangles(mask, p.coverDiameter / 2, label);
+  const outline = p.colorStyle === "outline" && mask.contours;
+  const scale = p.coverDiameter / mask.size;
+  const rectangles = outline
+    ? mask.contours.map((polygon) => polygon.map(([x, y]) => [x * scale - p.coverDiameter / 2, p.coverDiameter / 2 - y * scale]))
+    : maskRectangles(mask, p.coverDiameter / 2, label);
   if (!rectangles.length) return null;
-  const raw = new CrossSection(rectangles, "Positive");
-  const simplified = raw.simplify(Math.max(.025, p.coverDiameter / 10000));
+  // 描线与画布共用边界，底色从同一截面相减；微小闭环不再被像素矩形的粗简化吞掉。
+  const raw = new CrossSection(rectangles, outline ? "EvenOdd" : "Positive");
+  const simplified = raw.simplify(outline ? Math.min(.01, scale * .05) : Math.max(.025, p.coverDiameter / 10000));
   raw.delete();
   const clipped = simplified.intersect(outer);
   simplified.delete();
-  if (Math.abs(clipped.area()) < .01) {
+  if (Math.abs(clipped.area()) < (outline ? .0001 : .01)) {
     clipped.delete();
     return null;
   }
@@ -938,6 +943,7 @@ function addBodyAttachments(wasm, p, activeIndices, cover) {
 
 async function buildColorHubcapGeometry(wasm, p, activeIndices, mask) {
   const { Manifold, CrossSection } = wasm;
+  const strictCoordinates = Boolean(p.mount) || p.colorStyle === "outline";
   const radius = p.coverDiameter / 2;
   const segments = clamp(Math.ceil(Math.PI * 2 * radius / 1.5), 160, 420);
   const palette = p.colorPalette.slice(0, 8);
@@ -959,7 +965,7 @@ async function buildColorHubcapGeometry(wasm, p, activeIndices, mask) {
         section.delete();
         section = disjoint;
       }
-      if (Math.abs(section.area()) < .01) { section.delete(); continue; }
+      if (Math.abs(section.area()) < (p.colorStyle === "outline" ? .0001 : .01)) { section.delete(); continue; }
       colorSections.push({ label, section });
       const nextAllocated = allocated ? CrossSection.union([allocated, section]) : CrossSection.union([section]);
       if (allocated) allocated.delete();
@@ -988,11 +994,12 @@ async function buildColorHubcapGeometry(wasm, p, activeIndices, mask) {
   });
   const materialParts = printableBaseSolids.map((solid, index) => materialPartFromSolid(
     // 先按实际导出精度焊接再规范化，清掉裁圆边界在浮点量化后形成的重合边。
-    p.mount ? canonicalSolid(weldSolid(Manifold, canonicalSolid(solid))) : solid,
+    strictCoordinates ? canonicalSolid(weldSolid(Manifold, canonicalSolid(solid))) : solid,
     0,
     palette[0],
     index === 0 ? "背景底色与结构主体" : `背景底色区域 ${index + 1}`,
-    false
+    false,
+    strictCoordinates
   ));
   let colorComponentCount = 0;
   for (const entry of colorSections) {
@@ -1006,17 +1013,18 @@ async function buildColorHubcapGeometry(wasm, p, activeIndices, mask) {
       const solidParts = normalized.decompose();
       normalized.delete();
       colorComponentCount += solidParts.length;
-      if (materialParts.length + colorComponentCount > 400) {
+      if (materialParts.length + solidParts.length > 400) {
         dispose(solidParts);
         throw new Error("彩色色块超过 400 个，请提高最小色块宽度或减少颜色数量");
       }
       solidParts.forEach((solidPart, solidPartIndex) => {
         materialParts.push(materialPartFromSolid(
-          p.mount ? canonicalSolid(weldSolid(Manifold, canonicalSolid(solidPart))) : solidPart,
+          strictCoordinates ? canonicalSolid(weldSolid(Manifold, canonicalSolid(solidPart))) : solidPart,
           entry.label,
           palette[entry.label],
           `颜色 ${entry.label + 1} · 区域 ${componentIndex + 1}.${solidPartIndex + 1}`,
-          false
+          false,
+          strictCoordinates
         ));
       });
     });
@@ -1027,7 +1035,7 @@ async function buildColorHubcapGeometry(wasm, p, activeIndices, mask) {
     throw new Error(`分色实体与完整母体体积不一致（差值 ${volumeDelta.toFixed(3)} mm³）`);
   }
   let partitionDifference = 0, partitionOverlap = 0;
-  if (p.mount) {
+  if (strictCoordinates) {
     const solids = materialParts.map((part) => Manifold.ofMesh({
       numProp:3,
       vertProperties:Float32Array.from(part.exportMesh.vertices.flat()),
